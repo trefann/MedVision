@@ -7,6 +7,7 @@ import GradCamOverlay from "@/components/GradCamOverlay";
 import HeatmapOverlay from "@/components/HeatmapOverlay";
 import { useStore } from "@/store/useStore";
 import { useAnalysis } from "@/store/useAnalysis";
+import { HABIT_WEIGHT, IMAGE_WEIGHT } from "@/lib/risk";
 
 const TIER_UI = [
   { color: "#16A34A", label: "Looks healthy", note: "No suspicious pattern found" },
@@ -19,12 +20,15 @@ export default function TriagePage() {
   const patients = useStore((s) => s.patients);
   const photos = useAnalysis((s) => s.photos);
   const analysis = useAnalysis((s) => s.result);
+  const fused = useAnalysis((s) => s.fused);
+  const selectedId = useAnalysis((s) => s.patientId);
   const latestReferred = patients.find((p) => p.status === "referred");
-  const patient = latestReferred || patients[0];
+  const patient = (analysis && patients.find((p) => p.id === selectedId)) || latestReferred || patients[0];
 
-  const tier = analysis ? analysis.tier : 2;
+  const imageTier = analysis ? analysis.tier : 2;
+  const tier = analysis ? (fused?.finalTier ?? analysis.tier) : 2;
   const ui = TIER_UI[tier];
-  const confidence = analysis ? analysis.probs[tier === 0 ? 0 : tier].toFixed(2) : "0.87";
+  const confidence = analysis ? analysis.probs[imageTier].toFixed(2) : "0.87";
   const imageScore = analysis
     ? analysis.flagScore > 0.6 ? "High" : analysis.flagScore > 0.25 ? "Moderate" : "Low"
     : "High";
@@ -68,6 +72,11 @@ export default function TriagePage() {
           <p className="text-sm text-muted mt-0.5">
             {analysis ? ui.note : "Erythroplakia pattern"} · confidence {confidence}
           </p>
+          {fused?.escalated && (
+            <p className="text-xs font-semibold mt-1.5" style={{ color: bgColor }}>
+              Raised from {TIER_UI[imageTier].label.replace("Looks healthy", "Benign")} because of high habit risk
+            </p>
+          )}
         </motion.div>
 
         <div className="space-y-3">
@@ -80,6 +89,17 @@ export default function TriagePage() {
               <span className="text-sm text-muted">Sites analysed</span>
               <span className="text-sm font-bold text-dark">
                 {analysis.perPhotoTiers.filter((t) => t >= 0).length} of 4
+              </span>
+            </div>
+          )}
+          {analysis && fused && (
+            <div className="flex justify-between items-start">
+              <span className="text-sm text-muted">Combined risk</span>
+              <span className="text-sm font-bold text-dark text-right">
+                {Math.round(fused.combined * 100)}%
+                <span className="block text-[10px] font-normal text-muted">
+                  {IMAGE_WEIGHT * 100}% image + {HABIT_WEIGHT * 100}% habits ({patient?.habitRiskScore}/10)
+                </span>
               </span>
             </div>
           )}

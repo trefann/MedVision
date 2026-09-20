@@ -17,7 +17,8 @@ export default function ResultPage() {
   const router = useRouter();
   const [playing, setPlaying] = useState(false);
   const analysis = useAnalysis((s) => s.result);
-  const tier = analysis ? analysis.tier : 2;
+  const fused = useAnalysis((s) => s.fused);
+  const tier = analysis ? (fused?.finalTier ?? analysis.tier) : 2;
   const head = HEADLINES[tier];
 
   function handlePlay() {
@@ -63,7 +64,7 @@ export default function ResultPage() {
                 key={i}
                 className="w-1 bg-primary rounded-full"
                 animate={{
-                  height: [8, Math.random() * 24 + 8, 8],
+                  height: [8, ((i * 7) % 17) + 14, 8],
                 }}
                 transition={{
                   duration: 0.6,

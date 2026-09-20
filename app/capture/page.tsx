@@ -7,6 +7,8 @@ import { ORAL_SITE_LABELS, OralSite } from "@/lib/types";
 import PageTransition from "@/components/PageTransition";
 import { useAnalysis } from "@/store/useAnalysis";
 import { analysePhotos, downscaleFile, urlToDataUrl } from "@/lib/triage";
+import { useStore } from "@/store/useStore";
+import { fuseRisk } from "@/lib/risk";
 import { Quality, QUALITY_MESSAGE, measureQuality } from "@/lib/quality";
 
 const SITES: OralSite[] = [
@@ -26,6 +28,9 @@ export default function CapturePage() {
   const photos = useAnalysis((s) => s.photos);
   const setPhoto = useAnalysis((s) => s.setPhoto);
   const setResult = useAnalysis((s) => s.setResult);
+  const patients = useStore((s) => s.patients);
+  const patientId = useAnalysis((s) => s.patientId) ?? patients[0]?.id ?? "";
+  const setPatientId = useAnalysis((s) => s.setPatientId);
 
   useEffect(() => {
     useAnalysis.getState().reset();
@@ -56,7 +61,10 @@ export default function CapturePage() {
     }
     setAnalysing(true);
     try {
-      setResult(await analysePhotos(useAnalysis.getState().photos));
+      const a = await analysePhotos(useAnalysis.getState().photos);
+      setResult(a);
+      const habit = patients.find((p) => p.id === patientId)?.habitRiskScore ?? 0;
+      useAnalysis.getState().setFused(a ? fuseRisk(a.tier, a.probs, habit) : null);
     } catch {
       setResult(null);
     }
@@ -77,6 +85,16 @@ export default function CapturePage() {
             <p className="text-white/60 text-xs">
               {ORAL_SITE_LABELS[SITES[currentSite]]}
             </p>
+            <select
+              value={patientId}
+              onChange={(e) => setPatientId(e.target.value)}
+              aria-label="Patient"
+              className="mt-1.5 bg-white/20 text-white text-[10px] font-semibold rounded-lg px-2 py-1 max-w-[150px]"
+            >
+              {patients.map((p) => (
+                <option key={p.id} value={p.id} style={{ color: "#111" }}>{p.name}, {p.age}</option>
+              ))}
+            </select>
           </div>
         </div>
 
