@@ -5,10 +5,20 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { MapPin, Bell, Volume2 } from "lucide-react";
+import { useAnalysis } from "@/store/useAnalysis";
+
+const HEADLINES = [
+  { bg: "bg-success", text: "No problem found. Screen again in a year" },
+  { bg: "bg-warning", text: "Come back for a recheck in 4 weeks" },
+  { bg: "bg-danger", text: "See a doctor within 7 days" },
+];
 
 export default function ResultPage() {
   const router = useRouter();
   const [playing, setPlaying] = useState(false);
+  const analysis = useAnalysis((s) => s.result);
+  const tier = analysis ? analysis.tier : 2;
+  const head = HEADLINES[tier];
 
   function handlePlay() {
     setPlaying(true);
@@ -17,7 +27,7 @@ export default function ResultPage() {
 
   return (
     <PageTransition>
-      <div className="bg-danger px-5 pt-8 pb-8">
+      <div className={`${head.bg} px-5 pt-8 pb-8`}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
             Your result
@@ -29,7 +39,7 @@ export default function ResultPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-black text-white leading-tight"
         >
-          See a doctor within 7 days
+          {head.text}
         </motion.h1>
         <p className="text-white/70 text-sm mt-2">
           Delivered as audio in the local language
@@ -65,6 +75,7 @@ export default function ResultPage() {
           </div>
         )}
 
+        {tier === 2 && (
         <div className="bg-white rounded-[20px] p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wider font-medium text-muted mb-1">
             Referred to
@@ -74,6 +85,7 @@ export default function ResultPage() {
           </p>
           <p className="text-sm text-muted">Dental OPD · Tue and Thu</p>
         </div>
+        )}
 
         <div className="flex gap-3 mt-4">
           <motion.button

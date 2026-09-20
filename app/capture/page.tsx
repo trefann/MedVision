@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ORAL_SITE_LABELS, OralSite } from "@/lib/types";
 import PageTransition from "@/components/PageTransition";
+import { useAnalysis } from "@/store/useAnalysis";
+import { analysePhotos, downscaleFile, urlToDataUrl } from "@/lib/triage";
 
 const SITES: OralSite[] = [
   "buccal_mucosa_left",
@@ -18,8 +20,25 @@ export default function CapturePage() {
   const [currentSite, setCurrentSite] = useState(0);
   const [captured, setCaptured] = useState<boolean[]>([false, false, false, false]);
   const [focusOk, setFocusOk] = useState(true);
+  const [analysing, setAnalysing] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const photos = useAnalysis((s) => s.photos);
+  const setPhoto = useAnalysis((s) => s.setPhoto);
+  const setResult = useAnalysis((s) => s.setResult);
 
-  function handleCapture() {
+  useEffect(() => {
+    useAnalysis.getState().reset();
+  }, []);
+
+  async function onFile(file?: File) {
+    if (file) setPhoto(currentSite, await downscaleFile(file));
+  }
+
+  async function loadSample(name: string) {
+    setPhoto(currentSite, await urlToDataUrl(`/samples/${name}.jpg`));
+  }
+
+  async function handleCapture() {
     const next = [...captured];
     next[currentSite] = true;
     setCaptured(next);
@@ -27,9 +46,15 @@ export default function CapturePage() {
     if (currentSite < 3) {
       setCurrentSite(currentSite + 1);
       setFocusOk(Math.random() > 0.3);
-    } else {
-      router.push("/triage");
+      return;
     }
+    setAnalysing(true);
+    try {
+      setResult(await analysePhotos(useAnalysis.getState().photos));
+    } catch {
+      setResult(null);
+    }
+    router.push("/triage");
   }
 
   const capturedCount = captured.filter(Boolean).length;
@@ -61,16 +86,35 @@ export default function CapturePage() {
           </span>
         </div>
 
+        {photos[currentSite] && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photos[currentSite]!} alt="Captured site" className="absolute inset-0 w-full h-full object-cover" />
+        )}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-[200px] h-[140px] border-2 border-dashed border-white/50 rounded-[50%] flex items-center justify-center">
-            <div className="w-[160px] h-[110px] rounded-[50%] bg-[#8B5E5E]/30" />
+            {!photos[currentSite] && <div className="w-[160px] h-[110px] rounded-[50%] bg-[#8B5E5E]/30" />}
           </div>
         </div>
 
-        <div className="absolute bottom-4 left-0 right-0 text-center">
-          <p className="text-white/70 text-xs">
-            Align lesion inside the guide
-          </p>
+        <div className="absolute bottom-3 left-0 right-0 px-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+          <div className="flex gap-1.5 justify-center flex-wrap">
+            <button onClick={() => fileRef.current?.click()} className="px-2.5 py-1 rounded-full bg-white text-dark text-[10px] font-bold">
+              Upload photo
+            </button>
+            {["benign", "monitor", "refer"].map((n) => (
+              <button key={n} onClick={() => loadSample(n)} className="px-2.5 py-1 rounded-full bg-white/20 text-white text-[10px] font-semibold capitalize">
+                Sample: {n}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -108,9 +152,10 @@ export default function CapturePage() {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handleCapture}
-          className="w-full py-4 rounded-full bg-dark text-white font-bold text-base"
+          disabled={analysing}
+          className="w-full py-4 disabled:opacity-60 rounded-full bg-dark text-white font-bold text-base"
         >
-          {currentSite < 3 ? "Capture" : "Capture & Analyse"}
+          {analysing ? "Analysing on device..." : currentSite < 3 ? "Capture" : "Capture & Analyse"}
         </motion.button>
 
         <p className="text-xs text-muted mt-3">

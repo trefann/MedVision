@@ -4,20 +4,32 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import GradCamOverlay from "@/components/GradCamOverlay";
+import HeatmapOverlay from "@/components/HeatmapOverlay";
 import { useStore } from "@/store/useStore";
+import { useAnalysis } from "@/store/useAnalysis";
+
+const TIER_UI = [
+  { color: "#16A34A", label: "Looks healthy", note: "No suspicious pattern found" },
+  { color: "#F59E0B", label: "Monitor", note: "Recheck in 4 weeks" },
+  { color: "#E63946", label: "Refer urgently", note: "Suspicious lesion pattern" },
+];
 
 export default function TriagePage() {
   const router = useRouter();
   const patients = useStore((s) => s.patients);
+  const photos = useAnalysis((s) => s.photos);
+  const analysis = useAnalysis((s) => s.result);
   const latestReferred = patients.find((p) => p.status === "referred");
   const patient = latestReferred || patients[0];
 
-  const result = "refer" as const;
-  const confidence = 0.87;
-  const pattern = "Erythroplakia pattern";
-
-  const bgColor = "#E63946";
-  const label = "Refer urgently";
+  const tier = analysis ? analysis.tier : 2;
+  const ui = TIER_UI[tier];
+  const confidence = analysis ? analysis.probs[tier === 0 ? 0 : tier].toFixed(2) : "0.87";
+  const imageScore = analysis
+    ? analysis.flagScore > 0.6 ? "High" : analysis.flagScore > 0.25 ? "Moderate" : "Low"
+    : "High";
+  const shownPhoto = analysis ? photos[analysis.photoIndex] : null;
+  const bgColor = ui.color;
 
   return (
     <PageTransition>
@@ -28,8 +40,18 @@ export default function TriagePage() {
           </p>
         </div>
         <div className="mx-4 mt-3 bg-[#FDE8E8] rounded-2xl h-44 relative overflow-hidden flex items-center justify-center">
-          <div className="w-24 h-16 rounded-full bg-[#C9A08C]" />
-          <GradCamOverlay size={90} x="55%" y="48%" />
+          {analysis && shownPhoto ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={shownPhoto} alt="Analysed site" className="absolute inset-0 w-full h-full object-cover" />
+              {tier > 0 && <HeatmapOverlay heat={analysis.heat} />}
+            </>
+          ) : (
+            <>
+              <div className="w-24 h-16 rounded-full bg-[#C9A08C]" />
+              <GradCamOverlay size={90} x="55%" y="48%" />
+            </>
+          )}
         </div>
       </div>
 
@@ -41,18 +63,26 @@ export default function TriagePage() {
           style={{ backgroundColor: `${bgColor}15` }}
         >
           <p className="text-2xl font-black" style={{ color: bgColor }}>
-            {label}
+            {ui.label}
           </p>
           <p className="text-sm text-muted mt-0.5">
-            {pattern} · confidence {confidence}
+            {analysis ? ui.note : "Erythroplakia pattern"} · confidence {confidence}
           </p>
         </motion.div>
 
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted">Image score</span>
-            <span className="text-sm font-bold text-dark">High</span>
+            <span className="text-sm font-bold text-dark">{imageScore}</span>
           </div>
+          {analysis && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted">Sites analysed</span>
+              <span className="text-sm font-bold text-dark">
+                {analysis.perPhotoTiers.filter((t) => t >= 0).length} of 4
+              </span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted">Habit risk</span>
             <span className="text-sm font-bold text-dark">
@@ -71,7 +101,9 @@ export default function TriagePage() {
         </div>
 
         <p className="text-[11px] text-muted text-center mt-5 border-t border-neutral-100 pt-3">
-          Triage support only. Not a diagnosis.
+          {analysis
+            ? "Triage support only. Not a diagnosis. Prototype model, not clinically validated."
+            : "Triage support only. Not a diagnosis."}
         </p>
 
         <div className="flex gap-3 mt-4">
