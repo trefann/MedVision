@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+
+# ML
+ml/data/
+ml/out/best.pt
+ml/*.log
+__pycache__/
