@@ -102,6 +102,13 @@ export default function ChangeDetectionPage() {
             </span>
           </div>
         </div>
+
+        <button
+          onClick={() => router.push("/compare")}
+          className="w-full mt-5 py-3.5 rounded-full border-2 border-dark text-dark font-bold text-sm"
+        >
+          Measure change from new photos
+        </button>
       </div>
     </PageTransition>
   );

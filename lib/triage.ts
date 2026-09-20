@@ -151,3 +151,10 @@ export async function urlToDataUrl(url: string) {
   const blob = await (await fetch(url)).blob();
   return downscaleFile(new File([blob], "s.jpg", { type: blob.type }));
 }
+
+export async function saliencySeed(src: string) {
+  const r = await analyseOne(src);
+  const k = r.heat.indexOf(Math.max(...r.heat));
+  const stride = (SIZE - 64) / (GRID - 1);
+  return { x: ((k % GRID) * stride + 32) / SIZE, y: (Math.floor(k / GRID) * stride + 32) / SIZE };
+}
