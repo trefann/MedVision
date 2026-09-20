@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
@@ -34,6 +35,24 @@ export default function TriagePage() {
     : "High";
   const shownPhoto = analysis ? photos[analysis.photoIndex] : null;
   const bgColor = ui.color;
+
+  useEffect(() => {
+    if (!analysis || tier !== 2 || !patient) return;
+    const { referrals, visits, addReferral } = useStore.getState();
+    if (referrals.some((r) => r.patientId === patient.id && r.status !== "closed")) return;
+    const last = visits.filter((v) => v.patientId === patient.id).sort((a, b) => a.date.localeCompare(b.date)).pop();
+    addReferral({
+      id: `r-${Date.now()}`,
+      patientId: patient.id,
+      visitId: last?.id ?? "",
+      referredDate: new Date().toISOString().slice(0, 10),
+      hospital: "Govt. Hospital, Chengalpattu",
+      department: "Dental OPD",
+      availableDays: "Tue and Thu",
+      status: "flagged",
+      remindersSent: 0,
+    });
+  }, [analysis, tier, patient]);
 
   return (
     <PageTransition>

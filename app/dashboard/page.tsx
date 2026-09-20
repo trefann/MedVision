@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/store/useStore";
+import ReferralTracker from "@/components/ReferralTracker";
+import { funnel } from "@/lib/referral";
 import PageTransition from "@/components/PageTransition";
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
@@ -9,7 +12,8 @@ import Link from "next/link";
 import { Volume2, Tent, Stethoscope } from "lucide-react";
 
 export default function DashboardPage() {
-  const { patients, referrals, visits } = useStore();
+  const { patients, referrals, visits, sendReminders } = useStore();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const screened = visits.length > 0 ? 214 : 0;
   const flagged = referrals.length;
@@ -17,7 +21,17 @@ export default function DashboardPage() {
     (r) => r.status === "reached" || r.status === "biopsied" || r.status === "closed"
   ).length;
 
-  const overdueCount = referrals.filter((r) => r.status === "overdue").length;
+  const overdue = referrals.filter((r) => r.status === "overdue");
+  const overdueCount = overdue.length;
+  const steps = funnel(referrals);
+  const flaggedTotal = Math.max(steps[0].count, 1);
+  const stuck = steps[0].count - steps[2].count;
+
+  function remind() {
+    sendReminders(overdue.map((r) => r.id));
+    setNotice(`Voice reminders queued for ${overdueCount} patient${overdueCount > 1 ? "s" : ""}`);
+    setTimeout(() => setNotice(null), 3000);
+  }
 
   const followUpList = referrals.map((ref) => {
     const patient = patients.find((p) => p.id === ref.patientId);
@@ -50,7 +64,29 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="px-4 pt-5 pb-4">
+      <div className="px-4 pt-4">
+        <div className="bg-white rounded-[20px] p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-muted mb-3">Referral loop</p>
+          <div className="space-y-2">
+            {steps.map((st) => (
+              <div key={st.label} className="flex items-center gap-2">
+                <span className="text-xs text-dark w-16">{st.label}</span>
+                <div className="flex-1 h-2.5 bg-input-bg rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${(st.count / flaggedTotal) * 100}%` }} />
+                </div>
+                <span className="text-xs font-bold text-dark w-5 text-right">{st.count}</span>
+              </div>
+            ))}
+          </div>
+          {stuck > 0 && (
+            <p className="text-xs font-semibold text-danger mt-3">
+              {stuck} of {steps[0].count} flagged patient{steps[0].count > 1 ? "s have" : " has"} not reached a hospital yet
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 pb-4">
         <div className="space-y-3">
           {followUpList.map((ref) => (
             <Link key={ref.id} href={`/patients/${ref.patientId}`}>
@@ -63,21 +99,25 @@ export default function DashboardPage() {
                     {ref.patient?.name}
                   </p>
                   <p className="text-xs text-muted">
-                    Referred {formatDate(ref.referredDate)}
+                    {ref.status === "flagged" ? "Flagged" : "Referred"} {formatDate(ref.referredDate)}
                   </p>
                 </div>
                 <StatusBadge status={ref.status} size="sm" />
+              </div>
+              <div className="bg-white rounded-b-[20px] -mt-3 px-4 pb-3 pt-4 shadow-sm">
+                <ReferralTracker status={ref.status} compact />
               </div>
             </Link>
           ))}
         </div>
 
         {overdueCount > 0 && (
-          <button className="w-full mt-4 py-3.5 rounded-full bg-dark text-white font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
+          <button onClick={remind} className="w-full mt-4 py-3.5 rounded-full bg-dark text-white font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
             <Volume2 size={16} />
             Send voice reminders ({overdueCount})
           </button>
         )}
+        {notice && <p className="text-xs font-semibold text-success text-center mt-3">{notice}</p>}
       </div>
     </PageTransition>
   );

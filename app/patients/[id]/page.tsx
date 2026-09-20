@@ -7,18 +7,30 @@ import PageTransition from "@/components/PageTransition";
 import TimelineEntry from "@/components/TimelineEntry";
 import HabitChips from "@/components/HabitChips";
 import RiskScoreBar from "@/components/RiskScoreBar";
-import { ChevronLeft } from "lucide-react";
+import ReferralTracker from "@/components/ReferralTracker";
+import StatusBadge from "@/components/StatusBadge";
+import { NEXT_LABEL, isOpen } from "@/lib/referral";
+import { formatDate } from "@/lib/utils";
+import { ChevronLeft, Bell } from "lucide-react";
 
 export default function PatientTimelinePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const patients = useStore((s) => s.patients);
   const allVisits = useStore((s) => s.visits);
+  const allReferrals = useStore((s) => s.referrals);
+  const advanceReferral = useStore((s) => s.advanceReferral);
+  const sendReminders = useStore((s) => s.sendReminders);
   const patient = useMemo(() => patients.find((p) => p.id === id), [patients, id]);
   const visits = useMemo(
     () => allVisits.filter((v) => v.patientId === id).sort((a, b) => a.date.localeCompare(b.date)),
     [allVisits, id]
   );
+
+  const referral = useMemo(() => {
+    const mine = allReferrals.filter((r) => r.patientId === id);
+    return mine.find(isOpen) ?? mine[mine.length - 1];
+  }, [allReferrals, id]);
 
   if (!patient) {
     return (
@@ -53,6 +65,42 @@ export default function PatientTimelinePage() {
         </div>
 
         <RiskScoreBar score={patient.habitRiskScore} />
+
+        {referral && (
+          <div className="bg-white rounded-[20px] p-4 shadow-sm mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] uppercase tracking-wider font-medium text-muted">Referral</p>
+              <StatusBadge status={referral.status} size="sm" />
+            </div>
+            <ReferralTracker status={referral.status} />
+            <p className="text-sm font-semibold text-dark mt-4">{referral.hospital}</p>
+            <p className="text-xs text-muted">
+              {referral.department} · {referral.availableDays} · flagged {formatDate(referral.referredDate)}
+            </p>
+            {referral.status === "overdue" && (
+              <p className="text-xs font-semibold text-danger mt-2">Overdue: patient has not reached the hospital</p>
+            )}
+            <p className="text-[11px] text-muted mt-1">Reminders sent: {referral.remindersSent}</p>
+            {referral.status !== "closed" && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => advanceReferral(referral.id)}
+                  className="flex-1 py-2.5 rounded-full bg-dark text-white text-xs font-bold"
+                >
+                  {NEXT_LABEL[referral.status]}
+                </button>
+                {(referral.status === "referred" || referral.status === "overdue") && (
+                  <button
+                    onClick={() => sendReminders([referral.id])}
+                    className="px-4 py-2.5 rounded-full border-2 border-dark text-dark text-xs font-bold flex items-center gap-1"
+                  >
+                    <Bell size={13} /> Remind
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <h2 className="text-lg font-bold text-dark mt-5 mb-3">Visit history</h2>
         <div>

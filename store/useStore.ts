@@ -9,6 +9,7 @@ import {
   CampSession,
   SyncState,
 } from "@/lib/types";
+import { nextStatus, isOpen } from "@/lib/referral";
 import {
   seedPatients,
   seedVisits,
@@ -27,6 +28,9 @@ interface MedVisionStore {
   addPatient: (patient: Patient) => void;
   addVisit: (visit: Visit) => void;
   updateReferralStatus: (id: string, status: Referral["status"]) => void;
+  addReferral: (referral: Referral) => void;
+  advanceReferral: (id: string) => void;
+  sendReminders: (ids: string[]) => void;
   advanceCampQueue: () => void;
   simulateSync: () => void;
   resetToSeed: () => void;
@@ -55,6 +59,38 @@ export const useStore = create<MedVisionStore>()(
         set((state) => ({
           referrals: state.referrals.map((r) =>
             r.id === id ? { ...r, status } : r
+          ),
+        })),
+
+      addReferral: (referral) =>
+        set((state) => {
+          if (state.referrals.some((r) => r.patientId === referral.patientId && isOpen(r))) return state;
+          return {
+            referrals: [...state.referrals, referral],
+            patients: state.patients.map((p) =>
+              p.id === referral.patientId ? { ...p, status: "referred" } : p
+            ),
+          };
+        }),
+
+      advanceReferral: (id) =>
+        set((state) => {
+          const ref = state.referrals.find((r) => r.id === id);
+          const next = ref && nextStatus(ref.status);
+          if (!ref || !next) return state;
+          return {
+            referrals: state.referrals.map((r) => (r.id === id ? { ...r, status: next } : r)),
+            patients:
+              next === "closed"
+                ? state.patients.map((p) => (p.id === ref.patientId ? { ...p, status: "closed" } : p))
+                : state.patients,
+          };
+        }),
+
+      sendReminders: (ids) =>
+        set((state) => ({
+          referrals: state.referrals.map((r) =>
+            ids.includes(r.id) ? { ...r, remindersSent: r.remindersSent + 1 } : r
           ),
         })),
 

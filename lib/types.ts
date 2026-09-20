@@ -5,6 +5,7 @@ export type TriageResult = "benign" | "monitor" | "refer";
 export type PatientStatus = "active" | "referred" | "closed";
 
 export type ReferralStatus =
+  | "flagged"
   | "referred"
   | "reached"
   | "biopsied"

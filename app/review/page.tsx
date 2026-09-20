@@ -16,7 +16,7 @@ export default function ReviewPage() {
     (r) => r.status === "overdue" || r.status === "referred"
   );
 
-  const reviewCase = urgentReferrals[0];
+  const reviewCase = urgentReferrals.find((r) => visits.some((v) => v.id === r.visitId));
   const patient = patients.find((p) => p.id === reviewCase?.patientId);
   const visit = visits.find((v) => v.id === reviewCase?.visitId);
   const patientVisits = visits.filter(

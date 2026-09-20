@@ -54,6 +54,7 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case "overdue":
       return "#E63946";
+    case "flagged":
     case "referred":
     case "monitor":
     case "active":
@@ -72,6 +73,8 @@ export function getStatusLabel(status: string): string {
   switch (status) {
     case "overdue":
       return "Overdue";
+    case "flagged":
+      return "Flagged";
     case "referred":
       return "Referred";
     case "reached":
