@@ -1,0 +1,99 @@
+{
+  "epochs": 8,
+  "folds": [
+    {
+      "fold": 1,
+      "n_test": 497,
+      "thr": 0.9700000000000004,
+      "flagged_sensitivity": 0.890625,
+      "refer_caught": 0.9655172413793104,
+      "refer_exact": 0.3793103448275862,
+      "benign_cleared": 0.7598152424942263,
+      "balanced_acc": 0.617803767202509
+    },
+    {
+      "fold": 2,
+      "n_test": 491,
+      "thr": 0.9600000000000004,
+      "flagged_sensitivity": 0.8923076923076924,
+      "refer_caught": 0.8275862068965517,
+      "refer_exact": 0.3103448275862069,
+      "benign_cleared": 0.7464788732394366,
+      "balanced_acc": 0.6393116039789182
+    },
+    {
+      "fold": 3,
+      "n_test": 497,
+      "thr": 0.9500000000000004,
+      "flagged_sensitivity": 0.890625,
+      "refer_caught": 1.0,
+      "refer_exact": 0.6206896551724138,
+      "benign_cleared": 0.74364896073903,
+      "balanced_acc": 0.7023985862561956
+    },
+    {
+      "fold": 4,
+      "n_test": 492,
+      "thr": 0.9100000000000004,
+      "flagged_sensitivity": 0.9230769230769231,
+      "refer_caught": 1.0,
+      "refer_exact": 0.4827586206896552,
+      "benign_cleared": 0.7892271662763466,
+      "balanced_acc": 0.6647360030627413
+    },
+    {
+      "fold": 5,
+      "n_test": 492,
+      "thr": 0.9400000000000004,
+      "flagged_sensitivity": 0.8787878787878788,
+      "refer_caught": 0.9310344827586207,
+      "refer_exact": 0.7586206896551724,
+      "benign_cleared": 0.7910798122065728,
+      "balanced_acc": 0.7508010681881494
+    }
+  ],
+  "summary": {
+    "flagged_sensitivity": {
+      "mean": 0.8950844988344988,
+      "std": 0.016557781811801286
+    },
+    "refer_caught": {
+      "mean": 0.9448275862068967,
+      "std": 0.0715049701838887
+    },
+    "refer_exact": {
+      "mean": 0.5103448275862069,
+      "std": 0.18148548092332092
+    },
+    "benign_cleared": {
+      "mean": 0.7660500109911226,
+      "std": 0.022843928621750213
+    },
+    "balanced_acc": {
+      "mean": 0.6750102057377027,
+      "std": 0.05278945026335202
+    }
+  },
+  "pooled_confusion_matrix": [
+    [
+      1643,
+      443,
+      59
+    ],
+    [
+      26,
+      134,
+      19
+    ],
+    [
+      8,
+      63,
+      74
+    ]
+  ],
+  "tiers": [
+    "Benign",
+    "Monitor",
+    "Refer"
+  ]
+}
