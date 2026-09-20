@@ -7,6 +7,7 @@ import { ORAL_SITE_LABELS, OralSite } from "@/lib/types";
 import PageTransition from "@/components/PageTransition";
 import { useAnalysis } from "@/store/useAnalysis";
 import { analysePhotos, downscaleFile, urlToDataUrl } from "@/lib/triage";
+import { Quality, QUALITY_MESSAGE, measureQuality } from "@/lib/quality";
 
 const SITES: OralSite[] = [
   "buccal_mucosa_left",
@@ -19,7 +20,7 @@ export default function CapturePage() {
   const router = useRouter();
   const [currentSite, setCurrentSite] = useState(0);
   const [captured, setCaptured] = useState<boolean[]>([false, false, false, false]);
-  const [focusOk, setFocusOk] = useState(true);
+  const [quality, setQuality] = useState<(Quality | null)[]>([null, null, null, null]);
   const [analysing, setAnalysing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const photos = useAnalysis((s) => s.photos);
@@ -30,12 +31,18 @@ export default function CapturePage() {
     useAnalysis.getState().reset();
   }, []);
 
+  async function accept(site: number, src: string) {
+    setPhoto(site, src);
+    const q = await measureQuality(src);
+    setQuality((prev) => prev.map((v, i) => (i === site ? q : v)));
+  }
+
   async function onFile(file?: File) {
-    if (file) setPhoto(currentSite, await downscaleFile(file));
+    if (file) await accept(currentSite, await downscaleFile(file));
   }
 
   async function loadSample(name: string) {
-    setPhoto(currentSite, await urlToDataUrl(`/samples/${name}.jpg`));
+    await accept(currentSite, await urlToDataUrl(`/samples/${name}.jpg`));
   }
 
   async function handleCapture() {
@@ -45,7 +52,6 @@ export default function CapturePage() {
 
     if (currentSite < 3) {
       setCurrentSite(currentSite + 1);
-      setFocusOk(Math.random() > 0.3);
       return;
     }
     setAnalysing(true);
@@ -77,12 +83,22 @@ export default function CapturePage() {
         <div className="absolute top-3 right-4 flex gap-2 z-10">
           <span
             className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-              focusOk
+              !photos[currentSite] || !quality[currentSite]
+                ? "bg-white/20 text-white"
+                : quality[currentSite]!.ok
                 ? "bg-success/90 text-white"
                 : "bg-warning/90 text-dark"
             }`}
           >
-            {focusOk ? "Focus ok" : "Move closer"}
+            {!photos[currentSite] || !quality[currentSite]
+              ? "No photo"
+              : quality[currentSite]!.ok
+              ? "Photo ok"
+              : quality[currentSite]!.issue === "blurry"
+              ? "Too blurry"
+              : quality[currentSite]!.issue === "dark"
+              ? "Too dark"
+              : "Too bright"}
           </span>
         </div>
 
@@ -152,14 +168,16 @@ export default function CapturePage() {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handleCapture}
-          disabled={analysing}
+          disabled={analysing || (!!quality[currentSite] && !quality[currentSite]!.ok)}
           className="w-full py-4 disabled:opacity-60 rounded-full bg-dark text-white font-bold text-base"
         >
-          {analysing ? "Analysing on device..." : currentSite < 3 ? "Capture" : "Capture & Analyse"}
+          {analysing ? "Analysing on device..." : quality[currentSite] && !quality[currentSite]!.ok ? "Retake photo" : currentSite < 3 ? "Capture" : "Capture & Analyse"}
         </motion.button>
 
-        <p className="text-xs text-muted mt-3">
-          Capture · 4 sites · 90 seconds
+        <p className={`text-xs mt-3 ${quality[currentSite] && !quality[currentSite]!.ok ? "text-warning font-semibold" : "text-muted"}`}>
+          {quality[currentSite] && !quality[currentSite]!.ok
+            ? QUALITY_MESSAGE[quality[currentSite]!.issue!]
+            : "Capture · 4 sites · 90 seconds"}
         </p>
       </div>
     </PageTransition>
