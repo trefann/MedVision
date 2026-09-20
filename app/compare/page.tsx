@@ -8,7 +8,7 @@ import PageTransition from "@/components/PageTransition";
 import { downscaleFile, saliencySeed, urlToDataUrl } from "@/lib/triage";
 import {
   ChangeResult,
-  ESCALATE_GROWTH_PCT,
+  escalateThreshold,
   cameraShift,
   compareVisits,
   paintLesion,
@@ -26,6 +26,7 @@ export default function ComparePage() {
   const [newSrc, setNewSrc] = useState<string | null>(null);
   const [seed, setSeed] = useState<Seed | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [synthetic, setSynthetic] = useState(false);
   const [result, setResult] = useState<ChangeResult | null>(null);
   const [tests, setTests] = useState<TestRow[] | null>(null);
   const oldFile = useRef<HTMLInputElement>(null);
@@ -35,6 +36,7 @@ export default function ComparePage() {
     if (!file) return;
     const src = await downscaleFile(file);
     setResult(null);
+    setSynthetic(false);
     if (which === "old") { setOldSrc(src); setSeed(null); } else setNewSrc(src);
   }
 
@@ -47,7 +49,7 @@ export default function ComparePage() {
     const today = cameraShift(await imageToCanvas(after.src), kind === "same"
       ? { rotDeg: 9, zoom: 1.25, brightness: 0.85 }
       : { rotDeg: -7, zoom: 1.15, brightness: 1 });
-    setOldSrc(before.src); setNewSrc(today); setSeed(CENTRE); setBusy(null);
+    setOldSrc(before.src); setNewSrc(today); setSeed(CENTRE); setSynthetic(true); setBusy(null);
   }
 
   async function run() {
@@ -56,9 +58,9 @@ export default function ComparePage() {
     try {
       const s = seed ?? (await saliencySeed(oldSrc));
       setSeed(s);
-      setResult(await compareVisits(oldSrc, newSrc, s));
+      setResult(await compareVisits(oldSrc, newSrc, s, { method: synthetic ? "colour" : "model" }));
     } catch (e) {
-      setResult({ ok: false, reason: String(e), growthPct: 0, deltaE: 0, areaOld: 0, areaNew: 0, inliers: 0, matches: 0, scale: 1, warnings: [], thr: 0, areaFrac: 0, oldOverlay: "", newOverlay: "" });
+      setResult({ ok: false, reason: String(e), growthPct: 0, deltaE: 0, areaOld: 0, areaNew: 0, inliers: 0, matches: 0, scale: 1, warnings: [], thr: 0, areaFrac: 0, method: "model", oldOverlay: "", newOverlay: "" });
     }
     setBusy(null);
   }
@@ -80,7 +82,7 @@ export default function ComparePage() {
         const after = paintLesion(canvas, CENTRE, A0 * c.f);
         const expected = ((after.truePx - before.truePx) / before.truePx) * 100;
         const today = cameraShift(await imageToCanvas(after.src), c.cam);
-        const r = await compareVisits(before.src, today, CENTRE);
+        const r = await compareVisits(before.src, today, CENTRE, { method: "colour" });
         rows.push({ name: `${name}: ${c.label}`, expected, measured: r.ok ? r.growthPct : null, pass: r.ok && Math.abs(r.growthPct - expected) <= 10, note: r.ok ? undefined : r.reason });
         setTests([...rows]);
       }
@@ -89,7 +91,8 @@ export default function ComparePage() {
     setBusy(null);
   }
 
-  const escalate = result?.ok && result.growthPct > ESCALATE_GROWTH_PCT;
+  const limit = result?.ok ? escalateThreshold(result.method) : 15;
+  const escalate = result?.ok && result.growthPct > limit;
   const box = "relative flex-1 aspect-square rounded-2xl bg-input-bg overflow-hidden flex items-center justify-center text-[11px] text-muted";
 
   return (
@@ -158,14 +161,20 @@ export default function ComparePage() {
               <p className="text-2xl font-black" style={{ color: escalate ? "#E63946" : "#F59E0B" }}>
                 Lesion {result.growthPct >= 0 ? "grew" : "shrank"} {Math.abs(result.growthPct).toFixed(0)}%
               </p>
-              <p className="text-sm text-muted mt-0.5">{escalate ? `Above ${ESCALATE_GROWTH_PCT}%: escalate to urgent referral` : "Within threshold: continue monitoring"}</p>
+              <p className="text-sm text-muted mt-0.5">{escalate ? `Above ${limit}%: send for specialist review` : "Within threshold: continue monitoring"}</p>
             </div>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted">Colour shift (ΔE)</span><span className="font-bold text-dark">{result.deltaE.toFixed(1)}</span></div>
               <div className="flex justify-between"><span className="text-muted">Camera distance corrected</span><span className="font-bold text-dark">x{result.scale.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted">Lesion outline</span><span className="font-bold text-dark">{result.method === "model" ? "Trained model" : synthetic ? "Colour method (synthetic demo)" : "Colour method (fallback)"}</span></div>
               <div className="flex justify-between"><span className="text-muted">Alignment points</span><span className="font-bold text-dark">{result.inliers} of {result.matches}</span></div>
             </div>
             {result.warnings.map((w) => <p key={w} className="text-[11px] text-warning font-semibold mt-2">{w}</p>)}
+            {result.method === "model" && (
+              <p className="text-[11px] text-warning font-semibold mt-3">
+                In our tests, the same unchanged lesion photographed again varied by a median of 10% (up to 45%). Treat growth below {limit}% as noise.
+              </p>
+            )}
             <p className="text-[11px] text-muted mt-3">Prototype measurement. Thresholds are not clinically validated.</p>
           </motion.div>
         )}

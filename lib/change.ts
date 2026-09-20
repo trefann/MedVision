@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { SEG_SIZE, segmentProb } from "@/lib/triage";
+
 export interface ChangeResult {
   ok: boolean;
   reason?: string;
@@ -12,11 +14,17 @@ export interface ChangeResult {
   warnings: string[];
   thr: number;
   areaFrac: number;
+  method: "model" | "colour";
   oldOverlay: string;
   newOverlay: string;
 }
 
 export const ESCALATE_GROWTH_PCT = 15;
+export const ESCALATE_GROWTH_PCT_MODEL = 30;
+
+export function escalateThreshold(method: "model" | "colour") {
+  return method === "model" ? ESCALATE_GROWTH_PCT_MODEL : ESCALATE_GROWTH_PCT;
+}
 const WORK = 480;
 
 let cvP: Promise<any> | null = null;
@@ -163,6 +171,86 @@ function segment(cv: any, rgba: any, sx: number, sy: number, del: any[], fixedTh
   return { area: c.area, meanLab: mean, mask: c.out, frame: N, thr, stats: [mu, sd] };
 }
 
+function labStats(cv: any, rgba: any, del: any[]) {
+  const rgb = new cv.Mat(), lab = new cv.Mat();
+  del.push(rgb, lab);
+  cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
+  cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
+  const N = lab.rows * lab.cols, d = lab.data;
+  const mu = [0, 0, 0], sd = [0, 0, 0];
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) mu[c] += d[i * 3 + c];
+  for (let c = 0; c < 3; c++) mu[c] /= N;
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) sd[c] += (d[i * 3 + c] - mu[c]) ** 2;
+  for (let c = 0; c < 3; c++) sd[c] = Math.sqrt(sd[c] / N) || 1;
+  return [mu, sd];
+}
+
+function matchColour(cv: any, rgba: any, ref: number[][], del: any[]) {
+  const rgb = new cv.Mat(), lab = new cv.Mat(), out = new cv.Mat();
+  del.push(rgb, lab, out);
+  cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
+  cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
+  const [mu, sd] = labStats(cv, rgba, del);
+  const d = lab.data, N = lab.rows * lab.cols;
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) {
+    d[i * 3 + c] = Math.max(0, Math.min(255, (d[i * 3 + c] - mu[c]) * (ref[1][c] / sd[c]) + ref[0][c]));
+  }
+  cv.cvtColor(lab, rgb, cv.COLOR_Lab2RGB);
+  cv.cvtColor(rgb, out, cv.COLOR_RGB2RGBA);
+  return out;
+}
+
+async function segmentByModel(cv: any, rgba: any, sx: number, sy: number, del: any[]): Promise<Seg> {
+  const w = rgba.cols, h = rgba.rows, N = w * h;
+  const cnv = document.createElement("canvas");
+  cv.imshow(cnv, rgba);
+  const prob = await segmentProb(cnv);
+  const small = cv.matFromArray(SEG_SIZE, SEG_SIZE, cv.CV_32F, Array.from(prob));
+  const big = new cv.Mat();
+  del.push(small, big);
+  cv.resize(small, big, new cv.Size(w, h), 0, 0, cv.INTER_LINEAR);
+  const mask = new cv.Mat(h, w, cv.CV_8UC1, new cv.Scalar(0));
+  const pd = big.data32F;
+  for (let i = 0; i < N; i++) if (pd[i] > 0.5) mask.data[i] = 255;
+  const k = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(5, 5));
+  cv.morphologyEx(mask, mask, cv.MORPH_OPEN, k);
+  cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, k);
+  k.delete();
+
+  const labels = new cv.Mat();
+  const count = cv.connectedComponents(mask, labels, 8, cv.CV_32S);
+  const ld = labels.data32S;
+  const sizes = new Array(count).fill(0);
+  for (let i = 0; i < N; i++) sizes[ld[i]]++;
+  sx = Math.max(0, Math.min(w - 1, Math.round(sx)));
+  sy = Math.max(0, Math.min(h - 1, Math.round(sy)));
+  let label = ld[sy * w + sx];
+  if (!label) {
+    outer: for (let r = 1; r <= 20; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const yy = sy + dy, xx = sx + dx;
+      if (yy < 0 || xx < 0 || yy >= h || xx >= w) continue;
+      const l = ld[yy * w + xx];
+      if (l) { label = l; break outer; }
+    }
+  }
+  if (!label) for (let l = 1; l < count; l++) if (!label || sizes[l] > sizes[label]) label = l;
+
+  const comp = new cv.Mat(h, w, cv.CV_8UC1, new cv.Scalar(0));
+  const rgb = new cv.Mat(), lab = new cv.Mat();
+  cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
+  cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
+  const d = lab.data;
+  let area = 0; const mean = [0, 0, 0];
+  if (label) for (let i = 0; i < N; i++) if (ld[i] === label) {
+    comp.data[i] = 255; area++;
+    mean[0] += d[i * 3]; mean[1] += d[i * 3 + 1]; mean[2] += d[i * 3 + 2];
+  }
+  mask.delete(); labels.delete(); rgb.delete(); lab.delete();
+  del.push(comp);
+  const meanLab = area ? [(mean[0] / area) * 100 / 255, mean[1] / area - 128, mean[2] / area - 128] : [0, 0, 0];
+  return { area, meanLab, mask: comp, frame: N, thr: 0.5, stats: [] };
+}
+
 function overlay(cv: any, rgba: any, mask: any, del: any[]) {
   const out = rgba.clone(); del.push(out);
   const contours = new cv.MatVector(), hier = new cv.Mat();
@@ -177,14 +265,15 @@ function overlay(cv: any, rgba: any, mask: any, del: any[]) {
 export async function compareVisits(
   oldSrc: string,
   newSrc: string,
-  seed: { x: number; y: number }
+  seed: { x: number; y: number },
+  opts: { method?: "model" | "colour" } = {}
 ): Promise<ChangeResult> {
   const cv = await loadCv();
   const del: any[] = [];
   const M = () => { const m = new cv.Mat(); del.push(m); return m; };
   const fail = (reason: string): ChangeResult => ({
     ok: false, reason, growthPct: 0, deltaE: 0, areaOld: 0, areaNew: 0, inliers: 0, matches: 0, scale: 1,
-    warnings: [], thr: 0, areaFrac: 0, oldOverlay: "", newOverlay: "",
+    warnings: [], thr: 0, areaFrac: 0, method: "model", oldOverlay: "", newOverlay: "",
   });
   try {
     const [oc, nc] = await Promise.all([imageToCanvas(oldSrc), imageToCanvas(newSrc)]);
@@ -232,8 +321,20 @@ export async function compareVisits(
     cv.warpPerspective(b, warped, H, new cv.Size(a.cols, a.rows), cv.INTER_LINEAR, cv.BORDER_REPLICATE, new cv.Scalar());
 
     const sx = seed.x * a.cols, sy = seed.y * a.rows;
-    const sO = segment(cv, a, sx, sy, del);
-    const sN = segment(cv, warped, sx, sy, del, sO.thr, sO.stats);
+    let sO: Seg, sN: Seg, method: "model" | "colour" = "model";
+    let warpedForOverlay = warped;
+    try {
+      if (opts.method === "colour") throw new Error("colour requested");
+      const matched = matchColour(cv, warped, labStats(cv, a, del), del);
+      warpedForOverlay = matched;
+      sO = await segmentByModel(cv, a, sx, sy, del);
+      sN = await segmentByModel(cv, matched, sx, sy, del);
+    } catch {
+      method = "colour";
+      warpedForOverlay = warped;
+      sO = segment(cv, a, sx, sy, del);
+      sN = segment(cv, warped, sx, sy, del, sO.thr, sO.stats);
+    }
     const warnings: string[] = [];
     if (inliers / nm < 0.4) warnings.push("Alignment is weak. Retake from a similar angle.");
     if (sO.area < 40 || sN.area < 40) return fail("Could not outline the lesion. Tap directly on it and retry.");
@@ -242,9 +343,9 @@ export async function compareVisits(
     const growthPct = ((sN.area - sO.area) / sO.area) * 100;
     const deltaE = Math.sqrt(sO.meanLab.reduce((s, v, i) => s + (v - sN.meanLab[i]) ** 2, 0));
     return {
-      ok: true, growthPct, deltaE, areaOld: sO.area, areaNew: sN.area, inliers, matches: nm, scale, warnings, thr: sO.thr, areaFrac: sO.area / (a.cols * a.rows),
+      ok: true, growthPct, deltaE, areaOld: sO.area, areaNew: sN.area, inliers, matches: nm, scale, warnings, thr: sO.thr, areaFrac: sO.area / (a.cols * a.rows), method,
       oldOverlay: overlay(cv, a, sO.mask, del),
-      newOverlay: overlay(cv, warped, sN.mask, del),
+      newOverlay: overlay(cv, warpedForOverlay, sN.mask, del),
     };
   } finally {
     del.forEach((m) => { try { m.delete(); } catch { /* already freed */ } });

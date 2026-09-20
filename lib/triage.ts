@@ -158,3 +158,40 @@ export async function saliencySeed(src: string) {
   const stride = (SIZE - 64) / (GRID - 1);
   return { x: ((k % GRID) * stride + 32) / SIZE, y: (Math.floor(k / GRID) * stride + 32) / SIZE };
 }
+
+let segEngine: Promise<{ ort: any; session: any }> | null = null;
+
+function getSegEngine() {
+  if (!segEngine) {
+    segEngine = (async () => {
+      await loadScript("/ort/ort.wasm.min.js");
+      const ort = (window as any).ort;
+      ort.env.wasm.wasmPaths = "/ort/";
+      ort.env.wasm.numThreads = 1;
+      const session = await ort.InferenceSession.create("/models/seg.onnx", { executionProviders: ["wasm"] });
+      return { ort, session };
+    })().catch((e) => {
+      segEngine = null;
+      throw e;
+    });
+  }
+  return segEngine;
+}
+
+export const SEG_SIZE = 256;
+
+export async function segmentProb(source: HTMLCanvasElement): Promise<Float32Array> {
+  const { ort, session } = await getSegEngine();
+  const c = document.createElement("canvas");
+  c.width = c.height = SEG_SIZE;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(source, 0, 0, SEG_SIZE, SEG_SIZE);
+  const px = ctx.getImageData(0, 0, SEG_SIZE, SEG_SIZE).data;
+  const n = SEG_SIZE * SEG_SIZE;
+  const data = new Float32Array(3 * n);
+  for (let i = 0; i < n; i++) {
+    for (let ch = 0; ch < 3; ch++) data[ch * n + i] = (px[i * 4 + ch] / 255 - MEAN[ch]) / STD[ch];
+  }
+  const out = await session.run({ input: new ort.Tensor("float32", data, [1, 3, SEG_SIZE, SEG_SIZE]) });
+  return out.prob.data as Float32Array;
+}

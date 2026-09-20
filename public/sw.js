@@ -4,7 +4,7 @@ const ROUTES = [
   ...["p1", "p2", "p3", "p4", "p5"].flatMap((id) => [`/patients/${id}`, `/patients/${id}/change`]),
 ];
 const ASSETS = [
-  "/models/triage.onnx", "/models/threshold.json",
+  "/models/triage.onnx", "/models/seg.onnx", "/models/threshold.json",
   "/ort/ort.wasm.min.js", "/ort/ort-wasm-simd-threaded.wasm", "/ort/ort-wasm-simd-threaded.mjs",
   "/opencv/opencv.js",
   "/samples/benign.jpg", "/samples/monitor.jpg", "/samples/refer.jpg",

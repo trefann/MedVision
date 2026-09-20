@@ -1,0 +1,23 @@
+{
+  "hard": {
+    "n": 305,
+    "median_abs_change_pct": 10.531394306981873,
+    "p90_abs_change_pct": 44.951100726415866,
+    "share_within_15pct": 0.6360655737704918,
+    "share_within_25pct": 0.7639344262295082
+  },
+  "soft": {
+    "n": 315,
+    "median_abs_change_pct": 9.946853836724888,
+    "p90_abs_change_pct": 36.93732332127419,
+    "share_within_15pct": 0.6571428571428571,
+    "share_within_25pct": 0.819047619047619
+  },
+  "tta_soft": {
+    "n": 315,
+    "median_abs_change_pct": 10.098717615662565,
+    "p90_abs_change_pct": 43.19831953121185,
+    "share_within_15pct": 0.692063492063492,
+    "share_within_25pct": 0.8063492063492064
+  }
+}
