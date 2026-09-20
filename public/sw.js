@@ -50,7 +50,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname === "/sw.js") return;
+  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname === "/sw.js" || url.pathname.startsWith("/api/")) return;
 
   const isNav = req.mode === "navigate" || req.headers.get("RSC") === "1";
   if (isNav) {

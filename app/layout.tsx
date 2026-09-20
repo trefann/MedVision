@@ -5,6 +5,7 @@ import PhoneFrame from "@/components/PhoneFrame";
 import BottomNav from "@/components/BottomNav";
 import RegisterSW from "@/components/RegisterSW";
 import DemoGuide from "@/components/DemoGuide";
+import AutoSync from "@/components/AutoSync";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased">
         <RegisterSW />
+        <AutoSync />
         <PhoneFrame nav={<BottomNav />}>
           {children}
           <DemoGuide />

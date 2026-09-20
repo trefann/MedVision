@@ -1,18 +1,39 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ShieldCheck } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import { useStore } from "@/store/useStore";
 import { RISK_FACTORS, SIMULATED_PHCS, WEEKLY_SCREENED, livePhc, totals } from "@/lib/district";
+import type { District } from "@/lib/serverSync";
 
 export default function DistrictPage() {
   const router = useRouter();
   const referrals = useStore((s) => s.referrals);
   const visits = useStore((s) => s.visits);
 
-  const phcs = useMemo(() => [livePhc(referrals, visits.length > 0 ? 214 : 0), ...SIMULATED_PHCS], [referrals, visits]);
+  const [server, setServer] = useState<District | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/district")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d && d.devices > 0) setServer(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const phcs = useMemo(
+    () => [
+      server
+        ? { name: `Synced devices (${server.devices})`, live: true, ...server.totals }
+        : livePhc(referrals, visits.length > 0 ? 214 : 0),
+      ...SIMULATED_PHCS,
+    ],
+    [server, referrals, visits]
+  );
+  const riskFactors = server && server.totals.flagged > 0 ? server.riskFactors : RISK_FACTORS;
   const t = totals(phcs);
   const completion = t.flagged ? Math.round((t.reached / t.flagged) * 100) : 0;
   const worst = [...phcs].sort((a, b) => b.overdue - a.overdue)[0];
@@ -46,7 +67,9 @@ export default function DistrictPage() {
 
       <div className="px-4 pt-4 pb-6 bg-warm-white">
         <p className="text-[11px] bg-warning/15 text-dark rounded-xl px-3 py-2">
-          Sample data for demonstration. Only the Melmaruvathur row is live and updates as you move patients through referral stages.
+          {server
+            ? `Live row: anonymised records from ${server.devices} synced device${server.devices > 1 ? "s" : ""}. Other rows are sample data.`
+            : "Sample data for demonstration. The live row is this device only. Sync from Settings to send it to the server."}
         </p>
 
         <div className="bg-white rounded-[20px] p-4 shadow-sm mt-4">
@@ -107,9 +130,9 @@ export default function DistrictPage() {
         </div>
 
         <div className="bg-white rounded-[20px] p-4 shadow-sm mt-4">
-          <p className="text-[11px] uppercase tracking-wider font-medium text-muted mb-3">Risk factors among flagged (simulated)</p>
+          <p className="text-[11px] uppercase tracking-wider font-medium text-muted mb-3">Risk factors among flagged{server && server.totals.flagged > 0 ? " (live)" : " (simulated)"}</p>
           <div className="space-y-2">
-            {RISK_FACTORS.map((r) => (
+            {riskFactors.map((r) => (
               <div key={r.label} className="flex items-center gap-2">
                 <span className="text-xs text-dark w-16">{r.label}</span>
                 <div className="flex-1 h-2 bg-input-bg rounded-full overflow-hidden">

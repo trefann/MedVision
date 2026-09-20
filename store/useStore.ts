@@ -24,7 +24,12 @@ interface MedVisionStore {
   referrals: Referral[];
   campSession: CampSession;
   syncState: SyncState;
+  deviceId: string;
+  syncedSnapshot: Record<string, string>;
+  syncedAt: string | null;
 
+  ensureDeviceId: () => string;
+  markSynced: (snapshot: Record<string, string>, at: string) => void;
   addPatient: (patient: Patient) => void;
   addVisit: (visit: Visit) => void;
   updateReferralStatus: (id: string, status: Referral["status"]) => void;
@@ -48,6 +53,19 @@ export const useStore = create<MedVisionStore>()(
       referrals: seedReferrals,
       campSession: seedCampSession,
       syncState: seedSyncState,
+      deviceId: "",
+      syncedSnapshot: {},
+      syncedAt: null,
+
+      ensureDeviceId: () => {
+        const existing = get().deviceId;
+        if (existing) return existing;
+        const id = crypto.randomUUID();
+        set({ deviceId: id });
+        return id;
+      },
+
+      markSynced: (syncedSnapshot, syncedAt) => set({ syncedSnapshot, syncedAt }),
 
       addPatient: (patient) =>
         set((state) => ({ patients: [...state.patients, patient] })),
@@ -121,6 +139,8 @@ export const useStore = create<MedVisionStore>()(
           referrals: seedReferrals,
           campSession: seedCampSession,
           syncState: seedSyncState,
+          syncedSnapshot: {},
+          syncedAt: null,
         }),
 
       getPatient: (id) => get().patients.find((p) => p.id === id),

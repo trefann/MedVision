@@ -47,3 +47,5 @@ ml/data/
 ml/out/best.pt
 ml/*.log
 __pycache__/
+
+.env*
