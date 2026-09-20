@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { MapPin, Bell, Volume2 } from "lucide-react";
 import { useAnalysis } from "@/store/useAnalysis";
+import { LANGS, STRINGS, findVoice } from "@/lib/i18n";
 
-const HEADLINES = [
-  { bg: "bg-success", text: "No problem found. Screen again in a year" },
-  { bg: "bg-warning", text: "Come back for a recheck in 4 weeks" },
-  { bg: "bg-danger", text: "See a doctor within 7 days" },
-];
+const BG = ["bg-success", "bg-warning", "bg-danger"];
 
 export default function ResultPage() {
   const router = useRouter();
@@ -19,31 +16,71 @@ export default function ResultPage() {
   const analysis = useAnalysis((s) => s.result);
   const fused = useAnalysis((s) => s.fused);
   const tier = analysis ? (fused?.finalTier ?? analysis.tier) : 2;
-  const head = HEADLINES[tier];
+  const lang = useAnalysis((s) => s.lang);
+  const setLang = useAnalysis((s) => s.setLang);
+  const t = STRINGS[lang];
+  const [voiceMissing, setVoiceMissing] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+    };
+  }, []);
+
+  function changeLang(l: (typeof LANGS)[number]["code"]) {
+    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+    setPlaying(false);
+    setVoiceMissing(false);
+    setLang(l);
+  }
 
   function handlePlay() {
-    setPlaying(true);
-    setTimeout(() => setPlaying(false), 3000);
+    if (typeof speechSynthesis === "undefined") return setVoiceMissing(true);
+    speechSynthesis.cancel();
+    const voice = findVoice(lang);
+    if (!voice) return setVoiceMissing(true);
+    setVoiceMissing(false);
+    const u = new SpeechSynthesisUtterance(t.spoken[tier]);
+    u.voice = voice;
+    u.lang = voice.lang;
+    u.rate = 0.9;
+    u.onstart = () => setPlaying(true);
+    u.onend = () => setPlaying(false);
+    u.onerror = () => setPlaying(false);
+    speechSynthesis.speak(u);
   }
 
   return (
     <PageTransition>
-      <div className={`${head.bg} px-5 pt-8 pb-8`}>
+      <div className={`${BG[tier]} px-5 pt-8 pb-8`}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
-            Your result
+            {t.yourResult}
           </p>
-          <span className="text-white/60 text-xs">Tamil</span>
+          <div className="flex gap-1" role="group" aria-label="Language">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => changeLang(l.code)}
+                aria-pressed={lang === l.code}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                  lang === l.code ? "bg-white text-dark" : "bg-white/20 text-white"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-black text-white leading-tight"
         >
-          {head.text}
+          {t.headline[tier]}
         </motion.h1>
         <p className="text-white/70 text-sm mt-2">
-          Delivered as audio in the local language
+          {t.delivered}
         </p>
       </div>
 
@@ -54,8 +91,12 @@ export default function ResultPage() {
           className="w-full py-3.5 rounded-full border-2 border-dark text-dark font-semibold text-sm flex items-center justify-center gap-2 mb-5"
         >
           <Volume2 size={16} className={playing ? "animate-pulse text-primary" : ""} />
-          {playing ? "Playing..." : "Play spoken explanation"}
+          {playing ? t.playing : t.play}
         </motion.button>
+
+        {voiceMissing && (
+          <p className="text-xs font-semibold text-warning text-center -mt-3 mb-4">{t.noVoice}</p>
+        )}
 
         {playing && (
           <div className="flex items-center justify-center gap-1 mb-5 h-8">
@@ -79,12 +120,12 @@ export default function ResultPage() {
         {tier === 2 && (
         <div className="bg-white rounded-[20px] p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wider font-medium text-muted mb-1">
-            Referred to
+            {t.referredTo}
           </p>
           <p className="text-lg font-bold text-dark">
-            Govt. Hospital, Chengalpattu
+            {t.hospital}
           </p>
-          <p className="text-sm text-muted">Dental OPD · Tue and Thu</p>
+          <p className="text-sm text-muted">{t.dept}</p>
         </div>
         )}
 
@@ -94,14 +135,14 @@ export default function ResultPage() {
             className="flex-1 py-3.5 rounded-full border-2 border-dark text-dark font-semibold text-sm flex items-center justify-center gap-2"
           >
             <MapPin size={16} />
-            Directions
+            {t.directions}
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.96 }}
             className="flex-1 py-3.5 rounded-full border-2 border-dark text-dark font-semibold text-sm flex items-center justify-center gap-2"
           >
             <Bell size={16} />
-            Remind me
+            {t.remind}
           </motion.button>
         </div>
 
@@ -110,7 +151,7 @@ export default function ResultPage() {
           onClick={() => router.push("/dashboard")}
           className="w-full mt-4 py-3.5 rounded-full bg-dark text-white font-bold text-sm"
         >
-          Done
+          {t.done}
         </motion.button>
       </div>
     </PageTransition>
