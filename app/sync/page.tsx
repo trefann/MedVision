@@ -1,15 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useDemo } from "@/store/useDemo";
+import { useAnalysis } from "@/store/useAnalysis";
+import { DEMO_STEPS } from "@/lib/demoSteps";
 import { useStore } from "@/store/useStore";
 import PageTransition from "@/components/PageTransition";
 import TopBar from "@/components/TopBar";
 import { motion } from "framer-motion";
-import { WifiOff, RefreshCw, RotateCcw } from "lucide-react";
+import { WifiOff, RefreshCw, RotateCcw, Play } from "lucide-react";
 
 export default function SyncPage() {
   const { syncState, simulateSync, resetToSeed } = useStore();
   const [syncing, setSyncing] = useState(false);
+  const router = useRouter();
+  const startDemo = useDemo((s) => s.start);
+
+  function beginGuidedDemo() {
+    resetToSeed();
+    useAnalysis.getState().reset();
+    useAnalysis.getState().setLang("en");
+    startDemo();
+    router.push(DEMO_STEPS[0].route);
+  }
 
   function handleSync() {
     setSyncing(true);
@@ -90,6 +104,14 @@ export default function SyncPage() {
 
         <div className="mt-8 border-t border-neutral-100 pt-5">
           <h2 className="text-xl font-bold text-dark mb-3">Demo</h2>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={beginGuidedDemo}
+            className="w-full py-3.5 rounded-full bg-dark text-white font-bold text-sm flex items-center justify-center gap-2 mb-3"
+          >
+            <Play size={16} />
+            Start guided demo
+          </motion.button>
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={resetToSeed}

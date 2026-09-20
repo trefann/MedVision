@@ -4,6 +4,7 @@ import "./globals.css";
 import PhoneFrame from "@/components/PhoneFrame";
 import BottomNav from "@/components/BottomNav";
 import RegisterSW from "@/components/RegisterSW";
+import DemoGuide from "@/components/DemoGuide";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
         <PhoneFrame>
           {children}
           <BottomNav />
+          <DemoGuide />
         </PhoneFrame>
       </body>
     </html>
