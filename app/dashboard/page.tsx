@@ -9,7 +9,7 @@ import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Volume2, Tent, Stethoscope } from "lucide-react";
+import { Volume2, Tent, Stethoscope, BarChart3 } from "lucide-react";
 
 export default function DashboardPage() {
   const { patients, referrals, visits, sendReminders } = useStore();
@@ -60,6 +60,12 @@ export default function DashboardPage() {
           <div className="bg-danger text-white rounded-2xl p-3 flex items-center gap-2 active:scale-95 transition-transform">
             <Stethoscope size={18} />
             <span className="text-xs font-semibold">Review Queue</span>
+          </div>
+        </Link>
+        <Link href="/district" className="flex-1">
+          <div className="bg-white text-dark rounded-2xl p-3 flex items-center gap-2 shadow-sm active:scale-95 transition-transform">
+            <BarChart3 size={18} />
+            <span className="text-xs font-semibold">District</span>
           </div>
         </Link>
       </div>

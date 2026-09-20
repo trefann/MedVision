@@ -1,6 +1,6 @@
 const VERSION = "medvision-v1";
 const ROUTES = [
-  "/", "/dashboard", "/capture", "/triage", "/result", "/patients", "/patients/new", "/camp", "/sync", "/review", "/compare",
+  "/", "/dashboard", "/capture", "/triage", "/result", "/patients", "/patients/new", "/camp", "/sync", "/review", "/compare", "/district",
   ...["p1", "p2", "p3", "p4", "p5"].flatMap((id) => [`/patients/${id}`, `/patients/${id}/change`]),
 ];
 const ASSETS = [
