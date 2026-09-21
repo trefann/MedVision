@@ -83,16 +83,16 @@ function decide(p: number[], thr: number): 0 | 1 | 2 {
   return p[1] >= p[2] ? 1 : 2;
 }
 
-async function analyseOne(src: string) {
+async function analyseOne(src: string, withHeat = true) {
   const { ort, session, thr } = await getEngine();
   const base = await toTensorData(src);
 
   const patch = 64;
   const stride = (SIZE - patch) / (GRID - 1);
-  const n = GRID * GRID;
+  const n = withHeat ? GRID * GRID : 0;
   const batch = new Float32Array((n + 1) * base.length);
   batch.set(base, 0);
-  for (let gy = 0; gy < GRID; gy++) {
+  for (let gy = 0; gy < (withHeat ? GRID : 0); gy++) {
     for (let gx = 0; gx < GRID; gx++) {
       const off = (1 + gy * GRID + gx) * base.length;
       batch.set(base, off);
@@ -112,19 +112,21 @@ async function analyseOne(src: string) {
   const flagScore = 1 - probs[0];
   const drops = rows.slice(1).map((r) => Math.max(0, flagScore - (1 - r[0])));
   const peak = Math.max(...drops, 1e-6);
-  return { probs, flagScore, tier: decide(probs, thr), heat: drops.map((d) => d / peak) };
+  const heat = withHeat ? drops.map((d) => d / peak) : new Array<number>(GRID * GRID).fill(0);
+  return { probs, flagScore, tier: decide(probs, thr), heat };
 }
 
 export async function analysePhotos(photos: (string | null)[]): Promise<Analysis | null> {
   const results: { i: number; r: Awaited<ReturnType<typeof analyseOne>> }[] = [];
   for (let i = 0; i < photos.length; i++) {
     const src = photos[i];
-    if (src) results.push({ i, r: await analyseOne(src) });
+    if (src) results.push({ i, r: await analyseOne(src, false) });
   }
   if (!results.length) return null;
   const worst = results.reduce((a, b) =>
     b.r.tier > a.r.tier || (b.r.tier === a.r.tier && b.r.flagScore > a.r.flagScore) ? b : a
   );
+  worst.r = await analyseOne(photos[worst.i]!, true);
   const perPhotoTiers = photos.map((_, i) => results.find((x) => x.i === i)?.r.tier ?? -1);
   return { ...worst.r, photoIndex: worst.i, perPhotoTiers };
 }

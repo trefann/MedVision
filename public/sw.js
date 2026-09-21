@@ -9,6 +9,7 @@ const ASSETS = [
   "/opencv/opencv.js",
   ...["ta", "hi"].flatMap((l) => [0, 1, 2].map((t) => `/audio/${l}-${t}.wav`)),
   "/samples/benign.jpg", "/samples/monitor.jpg", "/samples/refer.jpg",
+  ...["benign", "monitor", "refer"].flatMap((n) => [0, 1, 2, 3].map((i) => `/samples/${n}-${i}.jpg`)),
   "/icon-192.png", "/icon-512.png",
 ];
 

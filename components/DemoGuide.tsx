@@ -31,10 +31,8 @@ export default function DemoGuide() {
     a.reset();
     a.setPatientId("p4");
     a.setUsedSample(true);
-    const [benign, refer, monitor] = await Promise.all(
-      ["benign", "refer", "monitor"].map((n) => urlToDataUrl(`/samples/${n}.jpg`))
-    );
-    [benign, refer, monitor, benign].forEach((src, i) => a.setPhoto(i, src));
+    const srcs = await Promise.all([0, 1, 2, 3].map((i) => urlToDataUrl(`/samples/refer-${i}.jpg`)));
+    srcs.forEach((src, i) => a.setPhoto(i, src));
     const result = await analysePhotos(useAnalysis.getState().photos);
     a.setResult(result);
     const habit = useStore.getState().patients.find((p) => p.id === "p4")?.habitRiskScore ?? 0;

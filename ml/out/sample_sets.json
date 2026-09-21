@@ -1,0 +1,47 @@
+{
+  "benign": {
+    "patient": "SMITA00050",
+    "files": [
+      "SMITA00050_R_LB.jpg",
+      "SMITA00050_R_RB.jpg",
+      "SMITA00050_R_DT.jpg",
+      "SMITA00050_R_LA.jpg"
+    ],
+    "site_codes": [
+      "LB",
+      "RB",
+      "DT",
+      "LA"
+    ]
+  },
+  "monitor": {
+    "patient": "SMITA00010",
+    "files": [
+      "SMITA00010_R_LB.JPG",
+      "SMITA00010_W_RB.jpg",
+      "SMITA00010_W_VT.jpg",
+      "SMITA00010_R_LA.JPG"
+    ],
+    "site_codes": [
+      "LB",
+      "RB",
+      "VT",
+      "LA"
+    ]
+  },
+  "refer": {
+    "patient": "SMITA00277",
+    "files": [
+      "SMITA00277_W_LB.jpeg",
+      "SMITA00277_W_RB.jpeg",
+      "SMITA00277_W_DT.jpeg",
+      "SMITA00277_W_UL.jpeg"
+    ],
+    "site_codes": [
+      "LB",
+      "RB",
+      "DT",
+      "UL"
+    ]
+  }
+}

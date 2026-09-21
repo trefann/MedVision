@@ -48,7 +48,10 @@ export default function CapturePage() {
   }
 
   async function loadSample(name: string) {
-    await accept(currentSite, await urlToDataUrl(`/samples/${name}.jpg`), true);
+    const srcs = await Promise.all([0, 1, 2, 3].map((i) => urlToDataUrl(`/samples/${name}-${i}.jpg`)));
+    for (let i = 0; i < srcs.length; i++) await accept(i, srcs[i], true);
+    setCurrentSite(0);
+    setCaptured([false, false, false, false]);
   }
 
   async function handleCapture() {
