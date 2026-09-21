@@ -18,6 +18,8 @@ const SITES: OralSite[] = [
   "palate",
 ];
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export default function CapturePage() {
   const router = useRouter();
   const [currentSite, setCurrentSite] = useState(0);
@@ -80,10 +82,35 @@ export default function CapturePage() {
     await analyse();
   }
 
+  async function playSample(name: string) {
+    const srcs = await Promise.all([0, 1, 2, 3].map((i) => urlToDataUrl(`/samples/${name}-${i}.jpg`)));
+    for (let i = 0; i < srcs.length; i++) await accept(i, srcs[i], true);
+    setCaptured([false, false, false, false]);
+    for (let i = 0; i < 4; i++) {
+      setCurrentSite(i);
+      await sleep(1100);
+      setCaptured((prev) => prev.map((v, k) => v || k <= i));
+    }
+    await analyse();
+  }
+
   function skipSite() {
     if (currentSite < 3) setCurrentSite(currentSite + 1);
     else if (photos.some(Boolean)) void analyse();
   }
+
+  const demoRun = useAnalysis((s) => s.demoRun);
+  const demoStarted = useRef(false);
+  useEffect(() => {
+    if (!demoRun || demoStarted.current) return;
+    demoStarted.current = true;
+    useAnalysis.setState({ demoRun: false });
+    setTimeout(() => {
+      demoStarted.current = false;
+      void playSample("refer");
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoRun]);
 
   const canSkip = !photos[currentSite] && !analysing && (currentSite < 3 || photos.some(Boolean));
   const capturedCount = captured.filter(Boolean).length;
@@ -197,6 +224,20 @@ export default function CapturePage() {
               {capturedCount}/4
             </span>
           </div>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className={`w-11 h-11 rounded-xl overflow-hidden bg-input-bg border-2 ${i === currentSite ? "border-primary" : "border-transparent"}`}
+            >
+              {photos[i] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photos[i]!} alt={`Site ${i + 1}`} className="w-full h-full object-cover" />
+              )}
+            </div>
+          ))}
         </div>
 
         <motion.button

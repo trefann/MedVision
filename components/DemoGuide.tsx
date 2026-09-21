@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { useDemo } from "@/store/useDemo";
 import { useAnalysis } from "@/store/useAnalysis";
-import { useStore } from "@/store/useStore";
 import { DEMO_STEPS } from "@/lib/demoSteps";
-import { analysePhotos, urlToDataUrl } from "@/lib/triage";
-import { fuseRisk } from "@/lib/risk";
 
 export default function DemoGuide() {
   const router = useRouter();
+  const pathname = usePathname();
   const { active, step, goTo, exit } = useDemo();
   const [collapsed, setCollapsed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,18 +25,25 @@ export default function DemoGuide() {
 
   async function runScreening() {
     setBusy(true);
+    setCollapsed(true);
     const a = useAnalysis.getState();
     a.reset();
     a.setPatientId("p4");
-    a.setUsedSample(true);
-    const srcs = await Promise.all([0, 1, 2, 3].map((i) => urlToDataUrl(`/samples/refer-${i}.jpg`)));
-    srcs.forEach((src, i) => a.setPhoto(i, src));
-    const result = await analysePhotos(useAnalysis.getState().photos);
-    a.setResult(result);
-    const habit = useStore.getState().patients.find((p) => p.id === "p4")?.habitRiskScore ?? 0;
-    a.setFused(result ? fuseRisk(result.tier, result.probs, habit) : null);
+    if (pathname !== "/capture") router.push("/capture");
+    a.requestDemoRun();
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 60000);
+      const unsubscribe = useAnalysis.subscribe((s) => {
+        if (s.result) {
+          clearTimeout(timer);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
     setBusy(false);
-    go(step + 1);
+    setCollapsed(false);
+    goTo(step + 1);
   }
 
   if (collapsed) {

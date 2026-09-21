@@ -11,6 +11,8 @@ interface AnalysisState {
   fused: Fused | null;
   patientId: string | null;
   usedSample: boolean;
+  demoRun: boolean;
+  requestDemoRun: () => void;
   setUsedSample: (v: boolean) => void;
   lang: Lang;
   setLang: (l: Lang) => void;
@@ -27,6 +29,8 @@ export const useAnalysis = create<AnalysisState>((set) => ({
   fused: null,
   patientId: null,
   usedSample: false,
+  demoRun: false,
+  requestDemoRun: () => set({ demoRun: true }),
   setUsedSample: (usedSample) => set({ usedSample }),
   lang: "en",
   setLang: (lang) => set({ lang }),
