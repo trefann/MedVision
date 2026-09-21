@@ -30,6 +30,7 @@ export default function DemoGuide() {
     const a = useAnalysis.getState();
     a.reset();
     a.setPatientId("p4");
+    a.setUsedSample(true);
     const [benign, refer, monitor] = await Promise.all(
       ["benign", "refer", "monitor"].map((n) => urlToDataUrl(`/samples/${n}.jpg`))
     );

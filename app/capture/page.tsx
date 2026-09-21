@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ORAL_SITE_LABELS, OralSite } from "@/lib/types";
 import PageTransition from "@/components/PageTransition";
-import { useAnalysis } from "@/store/useAnalysis";
+import { WALK_IN, useAnalysis } from "@/store/useAnalysis";
 import { analysePhotos, downscaleFile, urlToDataUrl } from "@/lib/triage";
 import { useStore } from "@/store/useStore";
 import { fuseRisk } from "@/lib/risk";
@@ -29,15 +29,16 @@ export default function CapturePage() {
   const setPhoto = useAnalysis((s) => s.setPhoto);
   const setResult = useAnalysis((s) => s.setResult);
   const patients = useStore((s) => s.patients);
-  const patientId = useAnalysis((s) => s.patientId) ?? patients[0]?.id ?? "";
+  const patientId = useAnalysis((s) => s.patientId) ?? WALK_IN;
   const setPatientId = useAnalysis((s) => s.setPatientId);
 
   useEffect(() => {
     useAnalysis.getState().reset();
   }, []);
 
-  async function accept(site: number, src: string) {
+  async function accept(site: number, src: string, sample = false) {
     setPhoto(site, src);
+    if (sample) useAnalysis.getState().setUsedSample(true);
     const q = await measureQuality(src);
     setQuality((prev) => prev.map((v, i) => (i === site ? q : v)));
   }
@@ -47,7 +48,7 @@ export default function CapturePage() {
   }
 
   async function loadSample(name: string) {
-    await accept(currentSite, await urlToDataUrl(`/samples/${name}.jpg`));
+    await accept(currentSite, await urlToDataUrl(`/samples/${name}.jpg`), true);
   }
 
   async function handleCapture() {
@@ -91,6 +92,7 @@ export default function CapturePage() {
               aria-label="Patient"
               className="mt-1.5 bg-white/20 text-white text-[10px] font-semibold rounded-lg px-2 py-1 max-w-[150px]"
             >
+              <option value={WALK_IN} style={{ color: "#111" }}>Walk-in (no record)</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id} style={{ color: "#111" }}>{p.name}, {p.age}</option>
               ))}

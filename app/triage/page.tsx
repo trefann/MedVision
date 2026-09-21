@@ -24,7 +24,8 @@ export default function TriagePage() {
   const fused = useAnalysis((s) => s.fused);
   const selectedId = useAnalysis((s) => s.patientId);
   const latestReferred = patients.find((p) => p.status === "referred");
-  const patient = (analysis && patients.find((p) => p.id === selectedId)) || latestReferred || patients[0];
+  const usedSample = useAnalysis((s) => s.usedSample);
+  const patient = analysis ? patients.find((p) => p.id === selectedId) : latestReferred || patients[0];
 
   const imageTier = analysis ? analysis.tier : 2;
   const tier = analysis ? (fused?.finalTier ?? analysis.tier) : 2;
@@ -117,26 +118,45 @@ export default function TriagePage() {
               <span className="text-sm font-bold text-dark text-right">
                 {Math.round(fused.combined * 100)}%
                 <span className="block text-[10px] font-normal text-muted">
-                  {IMAGE_WEIGHT * 100}% image + {HABIT_WEIGHT * 100}% habits ({patient?.habitRiskScore}/10)
+                  {patient
+                    ? `${IMAGE_WEIGHT * 100}% image + ${HABIT_WEIGHT * 100}% habits (${patient.habitRiskScore}/10)`
+                    : "Photo only: habits not recorded"}
                 </span>
               </span>
             </div>
           )}
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted">Habit risk</span>
-            <span className="text-sm font-bold text-dark">
-              {patient?.tobaccoHabit.types
-                .map((t) => t.charAt(0).toUpperCase() + t.slice(1).replace("_", " "))
-                .join(", ")}
-              , {patient?.tobaccoHabit.durationYears} yrs
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted">Mouth opening</span>
-            <span className="text-sm font-bold text-dark">
-              {patient?.mouthOpening} mm
-            </span>
-          </div>
+          {patient ? (
+            <>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted">Patient</span>
+                <span className="text-sm font-bold text-dark">{patient.name}, {patient.age}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted">Habit risk</span>
+                <span className="text-sm font-bold text-dark">
+                  {patient.tobaccoHabit.types
+                    .map((t) => t.charAt(0).toUpperCase() + t.slice(1).replace("_", " "))
+                    .join(", ")}
+                  , {patient.tobaccoHabit.durationYears} yrs
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted">Mouth opening</span>
+                <span className="text-sm font-bold text-dark">{patient.mouthOpening} mm</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted">Patient</span>
+              <span className="text-sm font-bold text-dark">Walk-in, no record</span>
+            </div>
+          )}
+          {analysis && usedSample && patient && (
+            <p className="text-[11px] font-semibold text-warning">Demo sample photo, not this patient&apos;s own mouth.</p>
+          )}
+          {analysis && tier === 2 && !patient && (
+            <p className="text-[11px] font-semibold text-warning">Not linked to a patient record, so no referral is tracked. Register the patient to follow up.</p>
+          )}
         </div>
 
         <p className="text-[11px] text-muted text-center mt-5 border-t border-neutral-100 pt-3">

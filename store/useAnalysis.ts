@@ -3,11 +3,15 @@ import type { Analysis } from "@/lib/triage";
 import type { Fused } from "@/lib/risk";
 import type { Lang } from "@/lib/i18n";
 
+export const WALK_IN = "walk-in";
+
 interface AnalysisState {
   photos: (string | null)[];
   result: Analysis | null;
   fused: Fused | null;
   patientId: string | null;
+  usedSample: boolean;
+  setUsedSample: (v: boolean) => void;
   lang: Lang;
   setLang: (l: Lang) => void;
   setPatientId: (id: string) => void;
@@ -22,11 +26,13 @@ export const useAnalysis = create<AnalysisState>((set) => ({
   result: null,
   fused: null,
   patientId: null,
+  usedSample: false,
+  setUsedSample: (usedSample) => set({ usedSample }),
   lang: "en",
   setLang: (lang) => set({ lang }),
   setPatientId: (patientId) => set({ patientId }),
   setFused: (fused) => set({ fused }),
   setPhoto: (i, src) => set((s) => ({ photos: s.photos.map((p, k) => (k === i ? src : p)) })),
   setResult: (result) => set({ result }),
-  reset: () => set({ photos: [null, null, null, null], result: null, fused: null }),
+  reset: () => set({ photos: [null, null, null, null], result: null, fused: null, usedSample: false }),
 }));
