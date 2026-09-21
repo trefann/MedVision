@@ -84,12 +84,17 @@ export default function CapturePage() {
 
   async function playSample(name: string) {
     const srcs = await Promise.all([0, 1, 2, 3].map((i) => urlToDataUrl(`/samples/${name}-${i}.jpg`)));
-    for (let i = 0; i < srcs.length; i++) await accept(i, srcs[i], true);
-    setCaptured([false, false, false, false]);
-    for (let i = 0; i < 4; i++) {
+    const qs = await Promise.all(srcs.map((src) => measureQuality(src)));
+    setQuality(qs);
+    setCurrentSite(0);
+    setCaptured([true, false, false, false]);
+    useAnalysis.getState().setUsedSample(true);
+    srcs.forEach((src, i) => setPhoto(i, src));
+    await sleep(1100);
+    for (let i = 1; i < 4; i++) {
       setCurrentSite(i);
-      await sleep(1100);
       setCaptured((prev) => prev.map((v, k) => v || k <= i));
+      await sleep(1100);
     }
     await analyse();
   }
