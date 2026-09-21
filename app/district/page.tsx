@@ -50,7 +50,7 @@ export default function DistrictPage() {
       <div className="bg-dark px-4 pt-3 pb-5">
         <button onClick={() => router.back()} className="text-white p-1 -ml-1 mb-2"><ChevronLeft size={24} /></button>
         <h1 className="text-2xl font-bold text-white">District view</h1>
-        <p className="text-white/60 text-sm mt-0.5">Chengalpattu · anonymised counts only</p>
+        <p className="text-white/60 text-sm mt-0.5">Chengalpattu · aggregate counts only</p>
         <div className="flex gap-2 mt-4">
           {[
             { l: "Screened", v: t.screened },
@@ -68,7 +68,7 @@ export default function DistrictPage() {
       <div className="px-4 pt-4 pb-6 bg-warm-white">
         <p className="text-[11px] bg-warning/15 text-dark rounded-xl px-3 py-2">
           {server
-            ? `Live row: anonymised records from ${server.devices} synced device${server.devices > 1 ? "s" : ""}. Other rows are sample data.`
+            ? `Live row: de-identified records from ${server.devices} synced device${server.devices > 1 ? "s" : ""}. Other rows are sample data.`
             : "Sample data for demonstration. The live row is this device only. Sync from Settings to send it to the server."}
         </p>
 

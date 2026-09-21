@@ -46,7 +46,7 @@ export const DEMO_STEPS: DemoStep[] = [
   {
     route: "/district",
     title: "District view",
-    say: "The health authority sees anonymised counts: where patients drop out and which centre needs attention. Only Melmaruvathur is live, the rest is sample data.",
+    say: "The health authority sees aggregate counts: where patients drop out and which centre needs attention. Only Melmaruvathur is live, the rest is sample data.",
   },
   {
     route: "/sync",

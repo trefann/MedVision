@@ -114,7 +114,7 @@ export default function SyncPage() {
         )}
 
         <p className="text-[11px] text-muted text-center mt-3">
-          Sends anonymised records only: no names, ABHA numbers, notes or photos. After your first sync, uploads resume automatically when a network is found.
+          Sends de-identified records only: no names, ABHA numbers, notes or photos. After your first sync, uploads resume automatically when a network is found.
         </p>
 
         <div className="mt-8 border-t border-neutral-100 pt-5">
