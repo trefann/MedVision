@@ -88,7 +88,7 @@ export default function DemoGuide() {
           Back
         </button>
         <button
-          onClick={() => (last ? exit() : go(step + 1))}
+          onClick={() => (last ? exit() : s.action === "screening" && !useAnalysis.getState().result ? runScreening() : go(step + 1))}
           className="flex-1 py-2 rounded-full bg-white text-dark text-xs font-bold"
         >
           {last ? "Finish" : "Next"}

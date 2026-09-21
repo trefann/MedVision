@@ -54,15 +54,7 @@ export default function CapturePage() {
     setCaptured([false, false, false, false]);
   }
 
-  async function handleCapture() {
-    const next = [...captured];
-    next[currentSite] = true;
-    setCaptured(next);
-
-    if (currentSite < 3) {
-      setCurrentSite(currentSite + 1);
-      return;
-    }
+  async function analyse() {
     setAnalysing(true);
     try {
       const a = await analysePhotos(useAnalysis.getState().photos);
@@ -75,6 +67,25 @@ export default function CapturePage() {
     router.push("/triage");
   }
 
+  async function handleCapture() {
+    if (!photos[currentSite]) return;
+    const next = [...captured];
+    next[currentSite] = true;
+    setCaptured(next);
+
+    if (currentSite < 3) {
+      setCurrentSite(currentSite + 1);
+      return;
+    }
+    await analyse();
+  }
+
+  function skipSite() {
+    if (currentSite < 3) setCurrentSite(currentSite + 1);
+    else if (photos.some(Boolean)) void analyse();
+  }
+
+  const canSkip = !photos[currentSite] && !analysing && (currentSite < 3 || photos.some(Boolean));
   const capturedCount = captured.filter(Boolean).length;
   const progressPercent = (capturedCount / 4) * 100;
 
@@ -191,11 +202,17 @@ export default function CapturePage() {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handleCapture}
-          disabled={analysing || (!!quality[currentSite] && !quality[currentSite]!.ok)}
+          disabled={analysing || !photos[currentSite] || (!!quality[currentSite] && !quality[currentSite]!.ok)}
           className="w-full py-4 disabled:opacity-60 rounded-full bg-dark text-white font-bold text-base"
         >
-          {analysing ? "Analysing on device..." : quality[currentSite] && !quality[currentSite]!.ok ? "Retake photo" : currentSite < 3 ? "Capture" : "Capture & Analyse"}
+          {analysing ? "Analysing on device..." : !photos[currentSite] ? "Add a photo to continue" : quality[currentSite] && !quality[currentSite]!.ok ? "Retake photo" : currentSite < 3 ? "Capture" : "Capture & Analyse"}
         </motion.button>
+
+        {canSkip && (
+          <button onClick={skipSite} className="text-xs font-semibold text-primary mt-2">
+            {currentSite < 3 ? "Skip this site" : "Skip and analyse"}
+          </button>
+        )}
 
         <p className={`text-xs mt-3 ${quality[currentSite] && !quality[currentSite]!.ok ? "text-warning font-semibold" : "text-muted"}`}>
           {quality[currentSite] && !quality[currentSite]!.ok

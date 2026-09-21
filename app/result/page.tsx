@@ -70,6 +70,20 @@ export default function ResultPage() {
     speechSynthesis.speak(u);
   }
 
+  if (!analysis) {
+    return (
+      <PageTransition>
+        <div className="px-6 pt-20 text-center">
+          <p className="text-2xl font-black text-dark">No screening yet</p>
+          <p className="text-sm text-muted mt-2">Add photos in Capture to see a result here.</p>
+          <button onClick={() => router.push("/capture")} className="mt-6 px-6 py-3 rounded-full bg-dark text-white font-bold text-sm">
+            Start screening
+          </button>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <div className={`${BG[tier]} px-5 pt-8 pb-8`}>
