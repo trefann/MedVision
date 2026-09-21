@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
@@ -20,23 +20,41 @@ export default function ResultPage() {
   const setLang = useAnalysis((s) => s.setLang);
   const t = STRINGS[lang];
   const [voiceMissing, setVoiceMissing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
-    };
-  }, []);
+  function stopAudio() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+  }
+
+  useEffect(() => stopAudio, []);
 
   function changeLang(l: (typeof LANGS)[number]["code"]) {
-    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+    stopAudio();
     setPlaying(false);
     setVoiceMissing(false);
     setLang(l);
   }
 
-  function handlePlay() {
+  async function handlePlay() {
+    stopAudio();
+    if (lang !== "en") {
+      const a = new Audio(`/audio/${lang}-${tier}.wav`);
+      audioRef.current = a;
+      a.onplay = () => setPlaying(true);
+      a.onended = () => setPlaying(false);
+      a.onerror = () => { setPlaying(false); setVoiceMissing(true); };
+      try {
+        await a.play();
+        setVoiceMissing(false);
+      } catch {
+        setPlaying(false);
+        setVoiceMissing(true);
+      }
+      return;
+    }
     if (typeof speechSynthesis === "undefined") return setVoiceMissing(true);
-    speechSynthesis.cancel();
     const voice = findVoice(lang);
     if (!voice) return setVoiceMissing(true);
     setVoiceMissing(false);
@@ -95,7 +113,7 @@ export default function ResultPage() {
         </motion.button>
 
         {voiceMissing && (
-          <p className="text-xs font-semibold text-warning text-center -mt-3 mb-4">{t.noVoice}</p>
+          <p className="text-xs font-semibold text-warning text-center -mt-3 mb-4">{lang === "en" ? t.noVoice : t.audioFail}</p>
         )}
 
         {playing && (

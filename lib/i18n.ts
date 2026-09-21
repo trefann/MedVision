@@ -12,6 +12,7 @@ interface Strings {
   play: string;
   playing: string;
   noVoice: string;
+  audioFail: string;
   referredTo: string;
   hospital: string;
   dept: string;
@@ -29,6 +30,7 @@ export const STRINGS: Record<Lang, Strings> = {
     play: "Play spoken explanation",
     playing: "Playing...",
     noVoice: "This phone has no English voice installed.",
+    audioFail: "Audio could not be played.",
     referredTo: "Referred to",
     hospital: "Govt. Hospital, Chengalpattu",
     dept: "Dental OPD · Tue and Thu",
@@ -52,6 +54,7 @@ export const STRINGS: Record<Lang, Strings> = {
     play: "விளக்கத்தைக் கேளுங்கள்",
     playing: "ஒலிக்கிறது...",
     noVoice: "இந்த தொலைபேசியில் தமிழ் குரல் நிறுவப்படவில்லை.",
+    audioFail: "ஒலியை இயக்க முடியவில்லை.",
     referredTo: "பரிந்துரைக்கப்பட்ட இடம்",
     hospital: "செங்கல்பட்டு அரசு மருத்துவமனை",
     dept: "பல் மருத்துவப் பிரிவு · செவ்வாய், வியாழன்",
@@ -75,6 +78,7 @@ export const STRINGS: Record<Lang, Strings> = {
     play: "समझाइश सुनें",
     playing: "चल रहा है...",
     noVoice: "इस फोन में हिन्दी आवाज़ इंस्टॉल नहीं है।",
+    audioFail: "ऑडियो चलाया नहीं जा सका।",
     referredTo: "यहां भेजा गया",
     hospital: "चेंगलपट्टू सरकारी अस्पताल",
     dept: "दंत विभाग · मंगलवार, गुरुवार",
