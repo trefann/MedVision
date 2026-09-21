@@ -7,6 +7,7 @@ import PageTransition from "@/components/PageTransition";
 import { MapPin, Bell, Volume2 } from "lucide-react";
 import { useAnalysis } from "@/store/useAnalysis";
 import { LANGS, STRINGS, findVoice } from "@/lib/i18n";
+import { HIGH_HABIT } from "@/lib/risk";
 
 const BG = ["bg-success", "bg-warning", "bg-danger"];
 
@@ -16,6 +17,7 @@ export default function ResultPage() {
   const analysis = useAnalysis((s) => s.result);
   const fused = useAnalysis((s) => s.fused);
   const tier = analysis ? (fused?.finalTier ?? analysis.tier) : 2;
+  const variant = tier === 0 && (fused?.habit ?? 0) >= HIGH_HABIT ? 3 : tier;
   const lang = useAnalysis((s) => s.lang);
   const setLang = useAnalysis((s) => s.setLang);
   const t = STRINGS[lang];
@@ -40,7 +42,7 @@ export default function ResultPage() {
   async function handlePlay() {
     stopAudio();
     if (lang !== "en") {
-      const a = new Audio(`/audio/${lang}-${tier}.wav`);
+      const a = new Audio(`/audio/${lang}-${variant}.wav`);
       audioRef.current = a;
       a.onplay = () => setPlaying(true);
       a.onended = () => setPlaying(false);
@@ -58,7 +60,7 @@ export default function ResultPage() {
     const voice = findVoice(lang);
     if (!voice) return setVoiceMissing(true);
     setVoiceMissing(false);
-    const u = new SpeechSynthesisUtterance(t.spoken[tier]);
+    const u = new SpeechSynthesisUtterance(t.spoken[variant]);
     u.voice = voice;
     u.lang = voice.lang;
     u.rate = 0.9;
@@ -95,7 +97,7 @@ export default function ResultPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-black text-white leading-tight"
         >
-          {t.headline[tier]}
+          {t.headline[variant]}
         </motion.h1>
         <p className="text-white/70 text-sm mt-2">
           {t.delivered}

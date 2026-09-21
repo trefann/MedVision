@@ -31,8 +31,11 @@ for lang, name in MODELS.items():
     model = VitsModel.from_pretrained(name).eval()
     print(lang, name, "uroman needed:", getattr(tok, "is_uroman", False), "rate", model.config.sampling_rate, flush=True)
     lines = spoken_lines(lang)
-    assert len(lines) == 3, (lang, len(lines))
+    assert len(lines) == 4, (lang, len(lines))
+    only = [int(a) for a in sys.argv[1:]] or [0, 1, 2, 3]
     for tier, text in enumerate(lines):
+        if tier not in only:
+            continue
         assert not re.search(r"\d", text), "digits in text: " + text
         chunks = []
         for s in sentences(text):

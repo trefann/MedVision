@@ -7,7 +7,7 @@ const ASSETS = [
   "/models/triage.onnx", "/models/seg.onnx", "/models/threshold.json",
   "/ort/ort.wasm.min.js", "/ort/ort-wasm-simd-threaded.wasm", "/ort/ort-wasm-simd-threaded.mjs",
   "/opencv/opencv.js",
-  ...["ta", "hi"].flatMap((l) => [0, 1, 2].map((t) => `/audio/${l}-${t}.wav`)),
+  ...["ta", "hi"].flatMap((l) => [0, 1, 2, 3].map((t) => `/audio/${l}-${t}.wav`)),
   "/samples/benign.jpg", "/samples/monitor.jpg", "/samples/refer.jpg",
   ...["benign", "monitor", "refer"].flatMap((n) => [0, 1, 2, 3].map((i) => `/samples/${n}-${i}.jpg`)),
   "/icon-192.png", "/icon-512.png",

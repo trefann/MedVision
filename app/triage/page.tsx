@@ -8,7 +8,7 @@ import GradCamOverlay from "@/components/GradCamOverlay";
 import HeatmapOverlay from "@/components/HeatmapOverlay";
 import { useStore } from "@/store/useStore";
 import { useAnalysis } from "@/store/useAnalysis";
-import { HABIT_WEIGHT, IMAGE_WEIGHT } from "@/lib/risk";
+import { HABIT_WEIGHT, HIGH_HABIT, IMAGE_WEIGHT, recheckMonths } from "@/lib/risk";
 
 const TIER_UI = [
   { color: "#16A34A", label: "Looks healthy", note: "No suspicious pattern found" },
@@ -92,6 +92,11 @@ export default function TriagePage() {
           <p className="text-sm text-muted mt-0.5">
             {analysis ? ui.note : "Erythroplakia pattern"} · confidence {confidence}
           </p>
+          {analysis && fused && tier === 0 && (
+            <p className="text-xs font-semibold mt-1.5" style={{ color: bgColor }}>
+              Recheck in {recheckMonths(0, fused.habit)} months{fused.habit >= HIGH_HABIT ? " because of high habit risk" : ""}
+            </p>
+          )}
           {fused?.escalated && (
             <p className="text-xs font-semibold mt-1.5" style={{ color: bgColor }}>
               Raised from {TIER_UI[imageTier].label.replace("Looks healthy", "Benign")} because of high habit risk
