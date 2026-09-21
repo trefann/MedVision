@@ -1,16 +1,16 @@
 "use client";
 
-interface GradCamOverlayProps {
+interface IllustrativeSaliencyProps {
   size?: number;
   x?: string;
   y?: string;
 }
 
-export default function GradCamOverlay({
+export default function IllustrativeSaliency({
   size = 80,
   x = "55%",
   y = "45%",
-}: GradCamOverlayProps) {
+}: IllustrativeSaliencyProps) {
   return (
     <div
       className="absolute pointer-events-none"
@@ -30,7 +30,7 @@ export default function GradCamOverlay({
         }}
       />
       <div className="absolute -bottom-5 right-0 bg-dark/70 text-white text-[9px] px-1.5 py-0.5 rounded font-medium">
-        Grad-CAM
+        Saliency map (illustrative)
       </div>
     </div>
   );

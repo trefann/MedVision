@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import PageTransition from "@/components/PageTransition";
-import GradCamOverlay from "@/components/GradCamOverlay";
+import IllustrativeSaliency from "@/components/IllustrativeSaliency";
 import { motion } from "framer-motion";
 import { formatDate } from "@/lib/utils";
 import { Phone, RotateCcw, ChevronLeft } from "lucide-react";
@@ -70,9 +70,9 @@ export default function ReviewPage() {
 
       <div className="mx-4 mt-3 bg-[#FDE8E8] rounded-2xl h-44 relative overflow-hidden flex items-center justify-center">
         <div className="w-20 h-14 rounded-full bg-[#C94040]" />
-        <GradCamOverlay size={85} x="55%" y="45%" />
+        <IllustrativeSaliency size={85} x="55%" y="45%" />
         <div className="absolute bottom-2 left-3 bg-dark/70 text-white text-[10px] px-2 py-1 rounded-lg font-medium">
-          Site 2 · {formatDate(visit.date)}
+          Illustrative image · Site 2 · {formatDate(visit.date)}
         </div>
       </div>
 

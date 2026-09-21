@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
-import GradCamOverlay from "@/components/GradCamOverlay";
 import HeatmapOverlay from "@/components/HeatmapOverlay";
 import { useStore } from "@/store/useStore";
 import { useAnalysis } from "@/store/useAnalysis";
@@ -78,16 +77,11 @@ export default function TriagePage() {
           </p>
         </div>
         <div className="mx-4 mt-3 bg-[#FDE8E8] rounded-2xl h-44 relative overflow-hidden flex items-center justify-center">
-          {analysis && shownPhoto ? (
+          {analysis && shownPhoto && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={shownPhoto} alt="Analysed site" className="absolute inset-0 w-full h-full object-cover" />
               {tier > 0 && <HeatmapOverlay heat={analysis.heat} />}
-            </>
-          ) : (
-            <>
-              <div className="w-24 h-16 rounded-full bg-[#C9A08C]" />
-              <GradCamOverlay size={90} x="55%" y="48%" />
             </>
           )}
         </div>
