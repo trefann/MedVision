@@ -17,7 +17,7 @@ export const DEMO_STEPS: DemoStep[] = [
     route: "/capture",
     title: "Guided capture",
     say: "Four mouth sites. Each photo is checked for blur and light, and the AI model runs on the phone with no internet.",
-    todo: "Tap the button below, or pick a sample photo yourself.",
+    todo: "Optional: tap 'blurry' under 'Test the quality gate' to show a bad photo being rejected, then Retake. Then tap the button below.",
     action: "screening",
   },
   {

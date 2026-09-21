@@ -48,3 +48,28 @@ export const QUALITY_MESSAGE: Record<string, string> = {
   dark: "Too dark. Move to better light",
   bright: "Too bright. Avoid direct glare",
 };
+
+export type BadKind = "blurry" | "dark" | "bright";
+
+const FILTERS: Record<BadKind, string> = {
+  blurry: "blur(6px)",
+  dark: "brightness(0.3)",
+  bright: "brightness(2.4)",
+};
+
+export function degradePhoto(src: string, kind: BadKind): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext("2d")!;
+      ctx.filter = FILTERS[kind];
+      ctx.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}

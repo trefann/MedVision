@@ -9,7 +9,7 @@ import { WALK_IN, useAnalysis } from "@/store/useAnalysis";
 import { analysePhotos, downscaleFile, urlToDataUrl } from "@/lib/triage";
 import { useStore } from "@/store/useStore";
 import { fuseRisk } from "@/lib/risk";
-import { Quality, QUALITY_MESSAGE, measureQuality } from "@/lib/quality";
+import { BadKind, Quality, QUALITY_MESSAGE, degradePhoto, measureQuality } from "@/lib/quality";
 
 const SITES: OralSite[] = [
   "buccal_mucosa_left",
@@ -69,8 +69,18 @@ export default function CapturePage() {
     router.push("/triage");
   }
 
+  async function loadBad(kind: BadKind) {
+    const good = await urlToDataUrl(`/samples/benign-${currentSite}.jpg`);
+    await accept(currentSite, await degradePhoto(good, kind));
+  }
+
   async function handleCapture() {
     if (!photos[currentSite]) return;
+    if (quality[currentSite] && !quality[currentSite]!.ok) {
+      setPhoto(currentSite, null);
+      setQuality((prev) => prev.map((v, i) => (i === currentSite ? null : v)));
+      return;
+    }
     const next = [...captured];
     next[currentSite] = true;
     setCaptured(next);
@@ -248,7 +258,7 @@ export default function CapturePage() {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handleCapture}
-          disabled={analysing || !photos[currentSite] || (!!quality[currentSite] && !quality[currentSite]!.ok)}
+          disabled={analysing || !photos[currentSite]}
           className="w-full py-4 disabled:opacity-60 rounded-full bg-dark text-white font-bold text-base"
         >
           {analysing ? "Analysing on device..." : !photos[currentSite] ? "Add a photo to continue" : quality[currentSite] && !quality[currentSite]!.ok ? "Retake photo" : currentSite < 3 ? "Capture" : "Capture & Analyse"}
@@ -264,6 +274,17 @@ export default function CapturePage() {
           {quality[currentSite] && !quality[currentSite]!.ok
             ? QUALITY_MESSAGE[quality[currentSite]!.issue!]
             : "Capture · 4 sites · 90 seconds"}
+        </p>
+        <p className="text-[11px] text-muted mt-2">
+          Test the quality gate:{" "}
+          {(["blurry", "dark", "bright"] as BadKind[]).map((k, i) => (
+            <span key={k}>
+              {i > 0 && " · "}
+              <button onClick={() => loadBad(k)} disabled={analysing} className="text-primary font-semibold underline">
+                {k}
+              </button>
+            </span>
+          ))}
         </p>
       </div>
     </PageTransition>
