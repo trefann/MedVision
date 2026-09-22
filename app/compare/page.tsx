@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
+import GhostCamera from "@/components/GhostCamera";
 import { downscaleFile, saliencySeed, urlToDataUrl } from "@/lib/triage";
 import {
   ChangeResult,
@@ -30,6 +31,7 @@ export default function ComparePage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [synthetic, setSynthetic] = useState(false);
   const [priorGrowth, setPriorGrowth] = useState<number | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const [result, setResult] = useState<ChangeResult | null>(null);
   const [tests, setTests] = useState<TestRow[] | null>(null);
   const oldFile = useRef<HTMLInputElement>(null);
@@ -42,6 +44,14 @@ export default function ComparePage() {
     setSynthetic(false);
     setPriorGrowth(null);
     if (which === "old") { setOldSrc(src); setSeed(null); } else setNewSrc(src);
+  }
+
+  function captureFromCamera(src: string) {
+    setResult(null);
+    setSynthetic(false);
+    setPriorGrowth(null);
+    setNewSrc(src);
+    setShowCamera(false);
   }
 
   async function loadDemo(kind: "same" | "grown") {
@@ -129,6 +139,9 @@ export default function ComparePage() {
 
   return (
     <PageTransition>
+      {showCamera && oldSrc && (
+        <GhostCamera ghostSrc={oldSrc} onCapture={captureFromCamera} onClose={() => setShowCamera(false)} />
+      )}
       <div className="bg-primary px-4 pt-3 pb-5">
         <button onClick={() => router.back()} className="text-white p-1 -ml-1 mb-2"><ChevronLeft size={24} /></button>
         <h1 className="text-2xl font-bold text-white">Compare visits</h1>
@@ -161,7 +174,12 @@ export default function ComparePage() {
                   ) : "No photo"}
                 </div>
                 <p className="text-xs font-bold text-dark mt-1.5">{w === "old" ? "Previous visit" : "Today"}</p>
-                <button onClick={() => (w === "old" ? oldFile : newFile).current?.click()} className="text-[11px] text-primary font-semibold">Upload photo</button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={() => (w === "old" ? oldFile : newFile).current?.click()} className="text-[11px] text-primary font-semibold">Upload photo</button>
+                  {w === "new" && oldSrc && (
+                    <button onClick={() => setShowCamera(true)} className="text-[11px] text-primary font-semibold">Use camera</button>
+                  )}
+                </div>
                 <input ref={w === "old" ? oldFile : newFile} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0], w)} />
               </div>
             );
