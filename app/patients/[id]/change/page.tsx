@@ -12,6 +12,7 @@ import {
   daysBetween,
   weeksLabel,
 } from "@/lib/utils";
+import { GROWTH_CONCERN_PCT, GROWTH_URGENT_PCT, classifyGrowth } from "@/lib/change";
 import { ChevronLeft } from "lucide-react";
 
 export default function ChangeDetectionPage() {
@@ -29,16 +30,30 @@ export default function ChangeDetectionPage() {
   const v1Id = searchParams.get("v1");
   const v2Id = searchParams.get("v2");
 
-  const visit1 = allVisits.find((v) => v.id === v1Id) || allVisits[allVisits.length - 2];
-  const visit2 = allVisits.find((v) => v.id === v2Id) || allVisits[allVisits.length - 1];
+  const i1 = v1Id ? allVisits.findIndex((v) => v.id === v1Id) : allVisits.length - 2;
+  const i2 = v2Id ? allVisits.findIndex((v) => v.id === v2Id) : allVisits.length - 1;
+  const visit1 = allVisits[i1];
+  const visit2 = allVisits[i2];
+  const visit0 = i1 > 0 ? allVisits[i1 - 1] : null;
 
   if (!patient || !visit1 || !visit2) {
     return <div className="p-4 text-muted">Insufficient visit data.</div>;
   }
 
   const growth = calculateGrowthPercent(visit1.lesionAreaMm2, visit2.lesionAreaMm2);
+  const priorGrowth = visit0 && visit0.lesionAreaMm2 > 0 ? calculateGrowthPercent(visit0.lesionAreaMm2, visit1.lesionAreaMm2) : null;
   const days = daysBetween(visit1.date, visit2.date);
-  const isUrgent = growth > 15;
+  const verdict = classifyGrowth(growth, priorGrowth);
+  const confirmedByPriorVisit = verdict === "urgent" && priorGrowth != null && priorGrowth > GROWTH_CONCERN_PCT;
+  const verdictColor = verdict === "urgent" ? "#E63946" : verdict === "provisional" ? "#F59E0B" : "#16A34A";
+  const verdictMessage =
+    verdict === "urgent"
+      ? confirmedByPriorVisit
+        ? "Confirmed across two visits: refer for in-person examination"
+        : `Above ${GROWTH_URGENT_PCT}%, far beyond normal photo-to-photo variation: refer for in-person examination now`
+      : verdict === "provisional"
+      ? `Above ${GROWTH_CONCERN_PCT}%: recheck at the next visit to confirm before referring`
+      : "Within normal photo-to-photo variation: continue monitoring";
 
   return (
     <PageTransition>
@@ -67,22 +82,20 @@ export default function ChangeDetectionPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className={`mt-4 rounded-2xl p-4 ${
-            isUrgent ? "bg-danger/10" : "bg-warning/10"
-          }`}
+          className="mt-4 rounded-2xl p-4"
+          style={{ backgroundColor: `${verdictColor}15` }}
         >
           <p
             className="text-xl font-black"
-            style={{ color: isUrgent ? "#E63946" : "#F59E0B" }}
+            style={{ color: verdictColor }}
           >
             Lesion grew {growth}%
           </p>
-          <p className="text-sm text-muted mt-0.5">
-            {isUrgent
-              ? "Escalated to urgent referral"
-              : "Continue monitoring"}
-          </p>
+          <p className="text-sm text-muted mt-0.5">{verdictMessage}</p>
         </motion.div>
+        {priorGrowth != null && (
+          <p className="text-[11px] text-muted mt-1.5">Previous visit-to-visit change was +{priorGrowth}%.</p>
+        )}
 
         <div className="mt-4 space-y-3">
           <div className="flex justify-between">

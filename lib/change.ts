@@ -19,12 +19,30 @@ export interface ChangeResult {
   newOverlay: string;
 }
 
-export const ESCALATE_GROWTH_PCT = 15;
-export const ESCALATE_GROWTH_PCT_MODEL = 30;
+// One threshold everywhere. Repeated measurement of an *unchanged* real lesion moved
+// by a median of 10% and up to 45% (see ml/out/seg_repeatability.json), so a single
+// comparison above this is provisional, not proof of growth.
+export const GROWTH_CONCERN_PCT = 30;
+// A single-visit jump this large sits far enough outside the measured noise band
+// (max observed 45%) that it is treated as urgent without waiting for a second visit.
+export const GROWTH_URGENT_PCT = 60;
 
-export function escalateThreshold(method: "model" | "colour") {
-  return method === "model" ? ESCALATE_GROWTH_PCT_MODEL : ESCALATE_GROWTH_PCT;
+export type GrowthVerdict = "stable" | "provisional" | "urgent";
+
+/**
+ * growthPct: latest visit-to-visit change. priorGrowthPct: the change measured at the
+ * previous comparison, if any. Growth above GROWTH_CONCERN_PCT only becomes "urgent"
+ * once it repeats across two consecutive visits (or is extreme enough on its own).
+ */
+export function classifyGrowth(growthPct: number, priorGrowthPct?: number | null): GrowthVerdict {
+  if (growthPct > GROWTH_URGENT_PCT) return "urgent";
+  if (growthPct > GROWTH_CONCERN_PCT) {
+    if (priorGrowthPct != null && priorGrowthPct > GROWTH_CONCERN_PCT) return "urgent";
+    return "provisional";
+  }
+  return "stable";
 }
+
 const WORK = 480;
 
 let cvP: Promise<any> | null = null;

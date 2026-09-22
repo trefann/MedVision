@@ -62,7 +62,7 @@ export default function CapturePage() {
       const a = await analysePhotos(useAnalysis.getState().photos);
       setResult(a);
       const habit = patients.find((p) => p.id === patientId)?.habitRiskScore ?? 0;
-      useAnalysis.getState().setFused(a ? fuseRisk(a.tier, a.probs, habit) : null);
+      useAnalysis.getState().setFused(a ? fuseRisk(a.tier, habit) : null);
     } catch {
       setResult(null);
     }

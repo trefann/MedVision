@@ -67,6 +67,9 @@ export default function ReviewPage() {
           {urgentReferrals.length} urgent
         </span>
       </div>
+      <p className="px-4 text-[11px] text-muted mt-1">
+        Case file for the in-person exam. Photos stay on the ASHA worker&apos;s phone and are not sent here.
+      </p>
 
       <div className="mx-4 mt-3 bg-[#FDE8E8] rounded-2xl h-44 relative overflow-hidden flex items-center justify-center">
         <div className="w-20 h-14 rounded-full bg-[#C94040]" />

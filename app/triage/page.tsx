@@ -7,7 +7,8 @@ import PageTransition from "@/components/PageTransition";
 import HeatmapOverlay from "@/components/HeatmapOverlay";
 import { useStore } from "@/store/useStore";
 import { useAnalysis } from "@/store/useAnalysis";
-import { HABIT_WEIGHT, HIGH_HABIT, IMAGE_WEIGHT, recheckMonths } from "@/lib/risk";
+import { HIGH_HABIT, recheckMonths } from "@/lib/risk";
+import { getRiskColor, getRiskLabel } from "@/lib/utils";
 
 const TIER_UI = [
   { color: "#16A34A", label: "Looks healthy", note: "No suspicious pattern found" },
@@ -125,19 +126,6 @@ export default function TriagePage() {
               </span>
             </div>
           )}
-          {analysis && fused && (
-            <div className="flex justify-between items-start">
-              <span className="text-sm text-muted">Combined risk</span>
-              <span className="text-sm font-bold text-dark text-right">
-                {Math.round(fused.combined * 100)}%
-                <span className="block text-[10px] font-normal text-muted">
-                  {patient
-                    ? `${IMAGE_WEIGHT * 100}% image + ${HABIT_WEIGHT * 100}% habits (${patient.habitRiskScore}/10)`
-                    : "Photo only: habits not recorded"}
-                </span>
-              </span>
-            </div>
-          )}
           {patient ? (
             <>
               <div className="flex justify-between items-center">
@@ -145,7 +133,13 @@ export default function TriagePage() {
                 <span className="text-sm font-bold text-dark">{patient.name}, {patient.age}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted">Habit risk</span>
+                <span className="text-sm text-muted">Habit history</span>
+                <span className="text-sm font-bold text-right" style={{ color: getRiskColor(patient.habitRiskScore) }}>
+                  {patient.habitRiskScore}/10 · {getRiskLabel(patient.habitRiskScore)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted">Tobacco use</span>
                 <span className="text-sm font-bold text-dark">
                   {patient.tobaccoHabit.types
                     .map((t) => t.charAt(0).toUpperCase() + t.slice(1).replace("_", " "))

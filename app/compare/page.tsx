@@ -8,7 +8,9 @@ import PageTransition from "@/components/PageTransition";
 import { downscaleFile, saliencySeed, urlToDataUrl } from "@/lib/triage";
 import {
   ChangeResult,
-  escalateThreshold,
+  GROWTH_CONCERN_PCT,
+  GROWTH_URGENT_PCT,
+  classifyGrowth,
   cameraShift,
   compareVisits,
   paintLesion,
@@ -27,6 +29,7 @@ export default function ComparePage() {
   const [seed, setSeed] = useState<Seed | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [synthetic, setSynthetic] = useState(false);
+  const [priorGrowth, setPriorGrowth] = useState<number | null>(null);
   const [result, setResult] = useState<ChangeResult | null>(null);
   const [tests, setTests] = useState<TestRow[] | null>(null);
   const oldFile = useRef<HTMLInputElement>(null);
@@ -37,12 +40,14 @@ export default function ComparePage() {
     const src = await downscaleFile(file);
     setResult(null);
     setSynthetic(false);
+    setPriorGrowth(null);
     if (which === "old") { setOldSrc(src); setSeed(null); } else setNewSrc(src);
   }
 
   async function loadDemo(kind: "same" | "grown") {
     setBusy("Preparing demo photos...");
     setResult(null);
+    setPriorGrowth(null);
     const canvas = await imageToCanvas(await urlToDataUrl("/samples/refer.jpg"));
     const before = paintLesion(canvas, CENTRE, A0);
     const after = paintLesion(canvas, CENTRE, kind === "same" ? A0 : A0 * 1.4);
@@ -50,6 +55,24 @@ export default function ComparePage() {
       ? { rotDeg: 9, zoom: 1.25, brightness: 0.85 }
       : { rotDeg: -7, zoom: 1.15, brightness: 1 });
     setOldSrc(before.src); setNewSrc(today); setSeed(CENTRE); setSynthetic(true); setBusy(null);
+  }
+
+  async function loadTwoVisitDemo() {
+    setBusy("Preparing two visits, three photos...");
+    setResult(null);
+    const canvas = await imageToCanvas(await urlToDataUrl("/samples/refer.jpg"));
+    const visit1 = paintLesion(canvas, CENTRE, A0);
+    const visit2 = paintLesion(canvas, CENTRE, A0 * 1.35);
+    const visit3 = paintLesion(canvas, CENTRE, A0 * 1.35 * 1.35);
+    const shot2 = cameraShift(await imageToCanvas(visit2.src), { rotDeg: 6, zoom: 1.1, brightness: 0.9 });
+    const shot3 = cameraShift(await imageToCanvas(visit3.src), { rotDeg: -8, zoom: 1.15, brightness: 1 });
+    const firstStep = await compareVisits(visit1.src, shot2, CENTRE, { method: "colour" });
+    setOldSrc(shot2);
+    setNewSrc(shot3);
+    setSeed(CENTRE);
+    setSynthetic(true);
+    setPriorGrowth(firstStep.ok ? firstStep.growthPct : null);
+    setBusy(null);
   }
 
   async function run() {
@@ -91,8 +114,17 @@ export default function ComparePage() {
     setBusy(null);
   }
 
-  const limit = result?.ok ? escalateThreshold(result.method) : 15;
-  const escalate = result?.ok && result.growthPct > limit;
+  const verdict = result?.ok ? classifyGrowth(result.growthPct, priorGrowth) : "stable";
+  const confirmedByPriorVisit = verdict === "urgent" && priorGrowth != null && priorGrowth > GROWTH_CONCERN_PCT;
+  const verdictColor = verdict === "urgent" ? "#E63946" : verdict === "provisional" ? "#F59E0B" : "#16A34A";
+  const verdictMessage =
+    verdict === "urgent"
+      ? confirmedByPriorVisit
+        ? "Confirmed across two visits: refer for in-person examination"
+        : `Above ${GROWTH_URGENT_PCT}%, far beyond normal photo-to-photo variation: refer for in-person examination now`
+      : verdict === "provisional"
+      ? `Above ${GROWTH_CONCERN_PCT}%: recheck at the next visit to confirm before referring`
+      : "Within normal photo-to-photo variation: continue monitoring";
   const box = "relative flex-1 aspect-square rounded-2xl bg-input-bg overflow-hidden flex items-center justify-center text-[11px] text-muted";
 
   return (
@@ -140,7 +172,11 @@ export default function ComparePage() {
         <div className="flex gap-2 mt-3 flex-wrap">
           <button onClick={() => loadDemo("same")} className="px-3 py-1.5 rounded-full bg-dark/5 text-dark text-[11px] font-semibold">Demo: same lesion, camera moved</button>
           <button onClick={() => loadDemo("grown")} className="px-3 py-1.5 rounded-full bg-dark/5 text-dark text-[11px] font-semibold">Demo: lesion grew</button>
+          <button onClick={loadTwoVisitDemo} className="px-3 py-1.5 rounded-full bg-dark/5 text-dark text-[11px] font-semibold">Demo: two visits confirm growth</button>
         </div>
+        {priorGrowth != null && (
+          <p className="text-[11px] text-muted mt-1">Previous comparison (visit 1 → 2) measured +{priorGrowth.toFixed(0)}% growth. This measurement is visit 2 → 3.</p>
+        )}
 
         <motion.button whileTap={{ scale: 0.96 }} disabled={!oldSrc || !newSrc || !!busy} onClick={run} className="w-full mt-4 py-3.5 rounded-full bg-dark text-white font-bold text-sm disabled:opacity-40">
           {busy ?? "Measure change"}
@@ -157,11 +193,11 @@ export default function ComparePage() {
               ))}
             </div>
             <p className="text-[11px] text-muted mt-1">Green outline = detected lesion. Today&apos;s photo is aligned to the previous one.</p>
-            <div className="rounded-2xl p-4 mt-3" style={{ backgroundColor: escalate ? "#E6394615" : "#F59E0B15" }}>
-              <p className="text-2xl font-black" style={{ color: escalate ? "#E63946" : "#F59E0B" }}>
+            <div className="rounded-2xl p-4 mt-3" style={{ backgroundColor: `${verdictColor}15` }}>
+              <p className="text-2xl font-black" style={{ color: verdictColor }}>
                 Lesion {result.growthPct >= 0 ? "grew" : "shrank"} {Math.abs(result.growthPct).toFixed(0)}%
               </p>
-              <p className="text-sm text-muted mt-0.5">{escalate ? `Above ${limit}%: send for specialist review` : "Within threshold: continue monitoring"}</p>
+              <p className="text-sm text-muted mt-0.5">{verdictMessage}</p>
             </div>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted">Colour shift (ΔE)</span><span className="font-bold text-dark">{result.deltaE.toFixed(1)}</span></div>
@@ -172,7 +208,7 @@ export default function ComparePage() {
             {result.warnings.map((w) => <p key={w} className="text-[11px] text-warning font-semibold mt-2">{w}</p>)}
             {result.method === "model" && (
               <p className="text-[11px] text-warning font-semibold mt-3">
-                In our tests, the same unchanged lesion photographed again varied by a median of 10% (up to 45%). Treat growth below {limit}% as noise.
+                In our tests, the same unchanged lesion photographed again varied by a median of 10% (up to 45%). Treat growth below {GROWTH_CONCERN_PCT}% as noise.
               </p>
             )}
             <p className="text-[11px] text-muted mt-3">Prototype measurement. Thresholds are not clinically validated.</p>

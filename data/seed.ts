@@ -99,9 +99,9 @@ export const seedVisits: Visit[] = [
     site: "buccal_mucosa_left",
     triageResult: "monitor",
     confidence: 0.81,
-    lesionAreaMm2: 17.8,
+    lesionAreaMm2: 22.5,
     colourDescription: "White with red margin",
-    notes: "Colour change noted at margins",
+    notes: "+36% since last visit. Above threshold on one visit only — recheck to confirm before referring.",
   },
   {
     id: "v4",
@@ -110,9 +110,9 @@ export const seedVisits: Visit[] = [
     site: "buccal_mucosa_left",
     triageResult: "refer",
     confidence: 0.87,
-    lesionAreaMm2: 21.8,
+    lesionAreaMm2: 30,
     colourDescription: "Red patch (erythroplakia)",
-    notes: "+22% growth, escalated to urgent referral",
+    notes: "+33% since last visit, confirmed across two consecutive visits. Referred for in-person examination.",
   },
   {
     id: "v5",
